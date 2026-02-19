@@ -1,17 +1,33 @@
-import { createSignal, For, Match, Switch, Show } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 import type { Component } from 'solid-js';
-import type { ProjectType } from '../../../../domain/entities/work-order.entity';
+import type { ProjectType } from '../../../../../domain/entities/work-order.entity';
 
 interface TerminSubmissionProps {
     projectType: ProjectType;
 }
+
+interface CombatStage {
+    id: number;
+    title: string;
+    max: number;
+    subs: string[];
+}
+
+interface StandardStage {
+    id: number;
+    title: string;
+    per: string;
+    desc: string;
+}
+
+type WorkflowStage = CombatStage | StandardStage;
 
 const TerminSubmission: Component<TerminSubmissionProps> = (props) => {
     const [currentStage, setCurrentStage] = createSignal(1);
     const [isSubmitting, setIsSubmitting] = createSignal(false);
 
     // Workflow configurations
-    const getWorkflow = () => {
+    const getWorkflow = (): WorkflowStage[] => {
         if (props.projectType === 'COMBAT') {
             return [
                 { id: 1, title: 'Term-1: SITAC', max: 35000000, subs: ['Operasional Cash', 'Sewa Lahan', 'Izin Warga', 'Izin Aparat/Pejabat/Ormas'] },
@@ -52,10 +68,10 @@ const TerminSubmission: Component<TerminSubmissionProps> = (props) => {
                                 <div
                                     onClick={() => setCurrentStage(stage.id)}
                                     class={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg transition-all cursor-pointer border-2 ${currentStage() === stage.id
-                                            ? 'bg-blue-600 border-blue-400 text-white shadow-xl shadow-blue-600/30'
-                                            : currentStage() > stage.id
-                                                ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
-                                                : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
+                                        ? 'bg-blue-600 border-blue-400 text-white shadow-xl shadow-blue-600/30'
+                                        : currentStage() > stage.id
+                                            ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
+                                            : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
                                         }`}
                                 >
                                     {currentStage() > stage.id ? (
@@ -80,15 +96,19 @@ const TerminSubmission: Component<TerminSubmissionProps> = (props) => {
                 <div class="lg:col-span-2 space-y-8">
                     <div class="bg-white/5 border border-white/10 rounded-[32px] p-10 space-y-8 relative overflow-hidden">
                         <header class="flex justify-between items-start">
-                            <div>
-                                <h3 class="text-2xl font-bold text-white leading-tight">
-                                    {currentStageInfo()?.title}
-                                    <span class="text-blue-400 ml-2">
-                                        {props.projectType === 'COMBAT' ? `(Max Rp ${currentStageInfo()?.max?.toLocaleString()})` : `(${currentStageInfo()?.per})`}
-                                    </span>
-                                </h3>
-                                <p class="text-gray-400 mt-2">Required documentation and workflow for this stage.</p>
-                            </div>
+                            <Show when={currentStageInfo()} keyed>
+                                {(info) => (
+                                    <div>
+                                        <h3 class="text-2xl font-bold text-white leading-tight">
+                                            {info.title}
+                                            <span class="text-blue-400 ml-2">
+                                                {props.projectType === 'COMBAT' && 'max' in info ? `(Max Rp ${info.max.toLocaleString()})` : 'per' in info ? `(${info.per})` : ''}
+                                            </span>
+                                        </h3>
+                                        <p class="text-gray-400 mt-2">Required documentation and workflow for this stage.</p>
+                                    </div>
+                                )}
+                            </Show>
                             <div class="px-4 py-1.5 bg-blue-600/10 border border-blue-500/20 rounded-full">
                                 <span class="text-xs font-bold text-blue-400 uppercase tracking-widest">Stage {currentStage()}</span>
                             </div>
@@ -96,35 +116,41 @@ const TerminSubmission: Component<TerminSubmissionProps> = (props) => {
 
                         <div class="space-y-8 pt-4">
                             {/* COMBAT Sub-Termins Logic */}
-                            <Show when={props.projectType === 'COMBAT' && currentStageInfo()?.subs}>
-                                <div class="space-y-6">
-                                    <label class="text-sm font-semibold text-gray-300 uppercase tracking-wider ml-1">Breakdown Sub-Stages</label>
-                                    <div class="grid gap-4">
-                                        <For each={currentStageInfo()?.subs}>
-                                            {(sub, index) => (
-                                                <div class="bg-white/5 border border-white/10 p-5 rounded-2xl flex items-center justify-between group hover:border-blue-500/30 transition-all cursor-pointer">
-                                                    <div class="flex items-center gap-4">
-                                                        <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 font-bold text-xs ring-1 ring-white/10 font-mono">
-                                                            {currentStage()}.{index() + 1}
-                                                        </div>
-                                                        <div>
-                                                            <p class="text-white font-bold group-hover:text-blue-400 transition-colors uppercase text-sm tracking-tight">{sub}</p>
-                                                            <p class="text-[10px] text-gray-600 font-bold uppercase mt-0.5">Required: Photos & Docs</p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="flex items-center gap-4">
-                                                        <div class="text-right">
-                                                            <input type="number" placeholder="Value..." class="w-24 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs text-right text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                                                        </div>
-                                                        <div class="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-gray-600 hover:text-white transition-colors">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
-                                                        </div>
-                                                    </div>
+                            <Show when={props.projectType === 'COMBAT' && (currentStageInfo() as CombatStage)} keyed>
+                                {(info) => (
+                                    <Show when={info.subs} keyed>
+                                        {(subs) => (
+                                            <div class="space-y-6">
+                                                <label class="text-sm font-semibold text-gray-300 uppercase tracking-wider ml-1">Breakdown Sub-Stages</label>
+                                                <div class="grid gap-4">
+                                                    <For each={subs}>
+                                                        {(sub, index) => (
+                                                            <div class="bg-white/5 border border-white/10 p-5 rounded-2xl flex items-center justify-between group hover:border-blue-500/30 transition-all cursor-pointer">
+                                                                <div class="flex items-center gap-4">
+                                                                    <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 font-bold text-xs ring-1 ring-white/10 font-mono">
+                                                                        {currentStage()}.{index() + 1}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p class="text-white font-bold group-hover:text-blue-400 transition-colors uppercase text-sm tracking-tight">{sub}</p>
+                                                                        <p class="text-[10px] text-gray-600 font-bold uppercase mt-0.5">Required: Photos & Docs</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="flex items-center gap-4">
+                                                                    <div class="text-right">
+                                                                        <input type="number" placeholder="Value..." class="w-24 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs text-right text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                                                    </div>
+                                                                    <div class="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-gray-600 hover:text-white transition-colors">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </For>
                                                 </div>
-                                            )}
-                                        </For>
-                                    </div>
-                                </div>
+                                            </div>
+                                        )}
+                                    </Show>
+                                )}
                             </Show>
 
                             {/* Standard View Logic */}
@@ -185,9 +211,9 @@ const TerminSubmission: Component<TerminSubmissionProps> = (props) => {
                                     {(t) => (
                                         <div class={`flex justify-between items-center p-3.5 rounded-xl border transition-all ${currentStage() === t.id ? 'bg-blue-600/10 border-blue-500/30 ring-1 ring-blue-500/20' : 'bg-white/5 border-transparent'}`}>
                                             <div>
-                                                <p class={`text-[10px] font-bold ${currentStage() === t.id ? 'text-blue-400' : 'text-gray-500'}`}>{t.title} {t.per ? `(${t.per})` : ''}</p>
+                                                <p class={`text-[10px] font-bold ${currentStage() === t.id ? 'text-blue-400' : 'text-gray-500'}`}>{t.title} {'per' in t ? `(${t.per})` : ''}</p>
                                                 <p class={`text-xs font-bold mt-1 ${currentStage() === t.id ? 'text-white' : 'text-gray-500'}`}>
-                                                    {t.max ? `Limit: Rp ${t.max.toLocaleString()}` : 'Budgeted'}
+                                                    {'max' in t ? `Limit: Rp ${t.max.toLocaleString()}` : 'Budgeted'}
                                                 </p>
                                             </div>
                                             <Show when={currentStage() > t.id}>

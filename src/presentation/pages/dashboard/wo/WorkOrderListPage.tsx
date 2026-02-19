@@ -8,7 +8,6 @@ import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 interface WorkOrderListPageProps {
     onCreateWO: () => void;
-    onCreateTechnical: () => void;
 }
 
 const WorkOrderListPage: Component<WorkOrderListPageProps> = (props) => {
@@ -16,22 +15,40 @@ const WorkOrderListPage: Component<WorkOrderListPageProps> = (props) => {
     const [workOrders] = createSignal<WorkOrder[]>([
         {
             id: '1',
-            contractNumber: 'CTR-2024-001',
+            projectName: 'Project Alpha',
+            lokasi: 'Jakarta',
+            budget: 70000000,
             projectType: 'COMBAT',
+            status: 'TECHNICAL_PROCESS',
+            woNumber: 'WO-2024-001',
+            contractNumber: 'CTR-2024-001',
+            keterangan: 'New site installation',
             poValue: 100000000,
             budgetTotal: 70000000,
-            status: 'TECHNICAL_PROCESS',
+            periodStart: new Date(),
+            periodEnd: new Date(),
             siteList: [],
+            files: [],
+            siteProjects: [],
             createdAt: new Date(),
         },
         {
             id: '2',
-            contractNumber: 'CTR-2024-002',
+            projectName: 'Project Beta',
+            lokasi: 'Surabaya',
+            budget: 175000000,
             projectType: 'L2H',
+            status: 'TERMIN_1',
+            woNumber: 'WO-2024-002',
+            contractNumber: 'CTR-2024-002',
+            keterangan: 'Maintenance work',
             poValue: 250000000,
             budgetTotal: 175000000,
-            status: 'TERMIN_1',
-            siteList: [{ id: 'S1', name: 'Site Alpha', location: 'Jakarta' }],
+            periodStart: new Date(),
+            periodEnd: new Date(),
+            siteList: [{ id: 'S1', name: 'Site Alpha', location: 'Jakarta' } as any],
+            files: [],
+            siteProjects: [],
             createdAt: new Date(),
         }
     ]);
@@ -47,22 +64,36 @@ const WorkOrderListPage: Component<WorkOrderListPageProps> = (props) => {
 
     const columnDefs = [
         {
-            field: 'contractNumber',
-            headerName: 'Contract #',
-            flex: 1,
+            field: 'projectName',
+            headerName: 'Project Name',
+            flex: 1.5,
             cellRenderer: (params: any) => {
                 return (
                     <div class="py-2">
                         <div class="font-bold text-white leading-tight">{params.value}</div>
-                        <div class="text-[10px] text-gray-500">ID: {params.data.id}</div>
+                        <div class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">ID: {params.data.id}</div>
+                    </div>
+                );
+            }
+        },
+        {
+            field: 'lokasi',
+            headerName: 'Location',
+            flex: 1,
+            cellRenderer: (params: any) => {
+                return (
+                    <div class="flex items-center h-full">
+                        <span class="text-xs font-medium text-gray-300">
+                            {params.value}
+                        </span>
                     </div>
                 );
             }
         },
         {
             field: 'projectType',
-            headerName: 'Project Type',
-            width: 150,
+            headerName: 'Type',
+            width: 130,
             cellRenderer: (params: any) => {
                 return (
                     <div class="flex items-center h-full">
@@ -74,18 +105,11 @@ const WorkOrderListPage: Component<WorkOrderListPageProps> = (props) => {
             }
         },
         {
-            field: 'poValue',
-            headerName: 'PO Value',
+            field: 'budget',
+            headerName: 'Budget',
             width: 180,
             valueFormatter: (params: any) => `Rp ${params.value.toLocaleString()}`,
-            cellStyle: { fontVariantNumeric: 'tabular-nums' }
-        },
-        {
-            field: 'budgetTotal',
-            headerName: 'Budget (70%)',
-            width: 180,
-            valueFormatter: (params: any) => `Rp ${params.value.toLocaleString()}`,
-            cellStyle: { color: '#60a5fa', fontVariantNumeric: 'tabular-nums', fontWeight: '600' }
+            cellStyle: { fontVariantNumeric: 'tabular-nums', color: '#60a5fa', fontWeight: 'bold' }
         },
         {
             field: 'status',
@@ -137,18 +161,11 @@ const WorkOrderListPage: Component<WorkOrderListPageProps> = (props) => {
                 </div>
                 <div class="flex items-center gap-3">
                     <button
-                        onClick={() => props.onCreateTechnical()}
-                        class="bg-white/5 hover:bg-white/10 text-white px-6 py-2.5 rounded-xl font-semibold transition-all border border-white/10 flex items-center gap-2 active:scale-95"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
-                        Technical Process
-                    </button>
-                    <button
                         onClick={() => props.onCreateWO()}
                         class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2 active:scale-95"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14" /></svg>
-                        Create New WO
+                        Create New Project
                     </button>
                 </div>
             </header>
