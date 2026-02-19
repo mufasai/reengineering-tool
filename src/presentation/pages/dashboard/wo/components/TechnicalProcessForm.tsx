@@ -18,11 +18,54 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
         setIsImporting(true);
         // Simulate import delay
         setTimeout(() => {
-            setSites([
-                { id: 'S1', name: 'Site Alpha', location: 'Jakarta' },
-                { id: 'S2', name: 'Site Bravo', location: 'Surabaya' },
-                { id: 'S3', name: 'Site Charlie', location: 'Bandung' },
-            ]);
+            const mockSites: Site[] = [
+                {
+                    id: 'S1',
+                    siteName: 'Site Alpha',
+                    siteInfo: 'Information about Alpha',
+                    pekerjaan: 'Installation',
+                    lokasi: 'Jakarta',
+                    nomorKontrak: 'K-001',
+                    start: new Date(),
+                    end: new Date(),
+                    maximalBudget: 10000000,
+                    costEstimated: 8000000,
+                    pemberiTugas: 'Telco A',
+                    penerimaTugas: 'Smartelco',
+                    team: []
+                },
+                {
+                    id: 'S2',
+                    siteName: 'Site Bravo',
+                    siteInfo: 'Information about Bravo',
+                    pekerjaan: 'Maintenance',
+                    lokasi: 'Surabaya',
+                    nomorKontrak: 'K-002',
+                    start: new Date(),
+                    end: new Date(),
+                    maximalBudget: 15000000,
+                    costEstimated: 12000000,
+                    pemberiTugas: 'Telco B',
+                    penerimaTugas: 'Smartelco',
+                    team: []
+                },
+                {
+                    id: 'S3',
+                    siteName: 'Site Charlie',
+                    siteInfo: 'Information about Charlie',
+                    pekerjaan: 'Survey',
+                    lokasi: 'Bandung',
+                    nomorKontrak: 'K-003',
+                    start: new Date(),
+                    end: new Date(),
+                    maximalBudget: 5000000,
+                    costEstimated: 4000000,
+                    pemberiTugas: 'Telco C',
+                    penerimaTugas: 'Smartelco',
+                    team: []
+                },
+            ];
+            setSites(mockSites);
             setIsImporting(false);
         }, 2000);
     };
@@ -118,8 +161,8 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                                     {(site) => (
                                         <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 text-left group hover:border-blue-500/30 transition-all">
                                             <div>
-                                                <p class="text-sm font-bold text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{site.name}</p>
-                                                <p class="text-xs text-gray-500 uppercase">{site.location}</p>
+                                                <p class="text-sm font-bold text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{site.siteName}</p>
+                                                <p class="text-xs text-gray-500 uppercase">{site.lokasi}</p>
                                             </div>
                                             <button class="text-gray-600 hover:text-red-400 px-2 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
