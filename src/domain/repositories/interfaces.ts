@@ -3,6 +3,15 @@ import type { Team, Personnel } from "../entities/team.entity";
 import type { Termin, PaymentStatus } from "../entities/payment.entity";
 import type { MaterialTransaction } from "../entities/material.entity";
 
+import type { LoginRequest, LoginResponse } from "../entities/auth.entity";
+
+export interface AuthRepository {
+    login(credentials: LoginRequest): Promise<LoginResponse>;
+    logout(): void;
+    getToken(): string | null;
+    saveToken(token: string): void;
+}
+
 export interface WorkOrderRepository {
     findById(id: string): Promise<WorkOrder | null>;
     findAll(): Promise<WorkOrder[]>;
