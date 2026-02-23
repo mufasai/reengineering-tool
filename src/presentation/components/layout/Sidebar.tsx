@@ -74,7 +74,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
     ];
 
     return (
-        <aside class="fixed left-0 top-0 h-screen w-64 bg-navy-900 text-white flex flex-col z-50 transition-all duration-300 border-r border-navy-800">
+        <aside class="h-screen w-64 bg-navy-900 text-white flex flex-col z-50 transition-all duration-300 border-r border-navy-800 flex-shrink-0 sticky top-0">
             {/* Brand */}
             <div class="h-[60px] flex items-center px-6 border-b border-navy-800 bg-navy-900 shrink-0">
                 <div class="flex items-center gap-3">
@@ -183,6 +183,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                         <For each={dataMasterItems}>
                             {(item) => (
                                 <button
+                                    onClick={() => props.onTabChange(item.id)}
                                     class={`w-full flex items-center gap-3 px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === item.id
                                         ? 'bg-navy-800 text-blue-400 font-semibold border-l-2 border-blue-500'
                                         : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'

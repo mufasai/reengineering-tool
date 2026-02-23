@@ -262,6 +262,9 @@ const ProjectListPage: Component = () => {
                         }}
                         rowHeight={80}
                         headerHeight={60}
+                        pagination={true}
+                        paginationPageSize={20}
+                        paginationPageSizeSelector={[10, 20, 50, 100]}
                     />
                 </div>
             </div>

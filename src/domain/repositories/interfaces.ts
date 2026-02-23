@@ -7,9 +7,16 @@ import type { LoginRequest, LoginResponse } from "../entities/auth.entity";
 
 import type { Project, CreateProjectRequest } from "../entities/project.entity";
 
+import type { Person, CreatePersonRequest } from "../entities/person.entity";
+
 export interface ProjectRepository {
     findAll(): Promise<Project[]>;
     create(project: CreateProjectRequest): Promise<Project>;
+}
+
+export interface PeopleRepository {
+    findAll(): Promise<Person[]>;
+    create(person: CreatePersonRequest): Promise<Person>;
 }
 
 export interface AuthRepository {

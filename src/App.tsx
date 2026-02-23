@@ -4,6 +4,7 @@ import HomePage from './presentation/pages/dashboard/home/HomePage';
 import LoginPage from './presentation/pages/auth/login/LoginPage';
 import WorkOrdersPage from './presentation/pages/dashboard/wo/WorkOrdersPage';
 import ProjectListPage from './presentation/pages/dashboard/projects/ProjectListPage';
+import PeoplePage from './presentation/pages/dashboard/people/PeoplePage';
 import Sidebar from './presentation/components/layout/Sidebar';
 import Header from './presentation/components/layout/Header';
 import { authStore } from './presentation/store/auth.store';
@@ -44,7 +45,7 @@ const App: Component = () => {
           <Sidebar activeTab={activeTab()} onTabChange={setActiveTab} />
 
           {/* Main Content Area */}
-          <main class="flex-1 flex flex-col ml-64 transition-all duration-300 relative">
+          <main class="flex-1 flex flex-col transition-all duration-300 relative min-w-0 h-screen overflow-hidden">
             <Header />
             <div class="p-8 overflow-y-auto flex-1 custom-scrollbar">
               <Switch>
@@ -56,6 +57,9 @@ const App: Component = () => {
                 </Match>
                 <Match when={activeTab() === 'PROJECTS'}>
                   <ProjectListPage />
+                </Match>
+                <Match when={activeTab() === 'PEOPLE'}>
+                  <PeoplePage />
                 </Match>
                 {/* Fallback for other tabs not yet implemented as full pages */}
                 <Match when={true}>
