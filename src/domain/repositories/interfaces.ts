@@ -5,6 +5,13 @@ import type { MaterialTransaction } from "../entities/material.entity";
 
 import type { LoginRequest, LoginResponse } from "../entities/auth.entity";
 
+import type { Project, CreateProjectRequest } from "../entities/project.entity";
+
+export interface ProjectRepository {
+    findAll(): Promise<Project[]>;
+    create(project: CreateProjectRequest): Promise<Project>;
+}
+
 export interface AuthRepository {
     login(credentials: LoginRequest): Promise<LoginResponse>;
     logout(): void;
