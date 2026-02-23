@@ -12,6 +12,8 @@ const ProjectListPage: Component = () => {
     const [statusFilter, setStatusFilter] = createSignal('');
     const [showModal, setShowModal] = createSignal(false);
     const [submitting, setSubmitting] = createSignal(false);
+    const [deleteTarget, setDeleteTarget] = createSignal<{ id: string; name: string } | null>(null);
+    const [deleting, setDeleting] = createSignal(false);
 
     // Fetch projects from API
     const [projectsResource, { refetch }] = createResource(async () => {
@@ -139,19 +141,25 @@ const ProjectListPage: Component = () => {
         },
         {
             headerName: 'Actions',
-            width: 100,
+            width: 150,
             sortable: false,
             filter: false,
-            cellRenderer: () => (
-                <div class="flex items-center gap-2 h-full">
-                    <button class="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
-                    </button>
-                    <button class="p-2 hover:bg-slate-100 text-slate-400 rounded-lg transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
-                    </button>
-                </div>
-            )
+            cellRenderer: (params: any) => {
+                const project = params.data as Project;
+                return (
+                    <div class="flex items-center gap-1.5 h-full">
+                        <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100" title="View">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                        </button>
+                        <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-all border border-slate-100" title="Edit">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
+                        </button>
+                        <button onClick={() => handleDeleteProject(project.id, project.name)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all border border-slate-100" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                        </button>
+                    </div>
+                );
+            }
         }
     ];
 
@@ -166,6 +174,26 @@ const ProjectListPage: Component = () => {
             alert('Gagal membuat project: ' + (error as Error).message);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleDeleteProject = (id: string, name: string) => {
+        setDeleteTarget({ id, name });
+    };
+
+    const confirmDelete = async () => {
+        const target = deleteTarget();
+        if (!target) return;
+        setDeleting(true);
+        try {
+            await projectRepository.delete(target.id);
+            setDeleteTarget(null);
+            await refetch();
+        } catch (error) {
+            console.error('Failed to delete project:', error);
+            alert('Gagal menghapus project: ' + (error as Error).message);
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -292,6 +320,44 @@ const ProjectListPage: Component = () => {
                                 onCancel={() => setShowModal(false)}
                                 submitting={submitting()}
                             />
+                        </div>
+                    </div>
+                </div>
+            </Show>
+
+            {/* Delete Confirmation Modal */}
+            <Show when={deleteTarget()}>
+                <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-slate-200 animate-in zoom-in-95 duration-200">
+                        <div class="flex flex-col items-center text-center gap-5">
+                            <div class="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center border border-red-100">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900">Hapus Project</h3>
+                                <p class="text-slate-500 mt-2 text-sm leading-relaxed">
+                                    Apakah Anda yakin ingin menghapus project <strong class="text-slate-800">"{deleteTarget()?.name}"</strong>? Data yang dihapus tidak dapat dikembalikan.
+                                </p>
+                            </div>
+                            <div class="flex gap-3 w-full mt-2">
+                                <button
+                                    onClick={() => setDeleteTarget(null)}
+                                    disabled={deleting()}
+                                    class="flex-1 py-3.5 px-6 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all text-sm disabled:opacity-50"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={confirmDelete}
+                                    disabled={deleting()}
+                                    class="flex-1 py-3.5 px-6 rounded-2xl font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 text-sm flex items-center justify-center gap-2 disabled:opacity-70"
+                                >
+                                    <Show when={deleting()}>
+                                        <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    </Show>
+                                    {deleting() ? 'Menghapus...' : 'Hapus'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

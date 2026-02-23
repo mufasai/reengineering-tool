@@ -12,6 +12,7 @@ import type { Person, CreatePersonRequest } from "../entities/person.entity";
 export interface ProjectRepository {
     findAll(): Promise<Project[]>;
     create(project: CreateProjectRequest): Promise<Project>;
+    delete(id: string): Promise<void>;
 }
 
 export interface PeopleRepository {

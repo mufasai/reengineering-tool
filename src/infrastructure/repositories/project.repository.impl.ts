@@ -12,6 +12,12 @@ export class ProjectRepositoryImpl implements ProjectRepository {
         const response = await apiClient.post<ApiResponse<Project>>('/api/projects', project);
         return response.data;
     }
+
+    async delete(id: string): Promise<void> {
+        // Strip SurrealDB table prefix (e.g. "projects:abc123" → "abc123")
+        const rawId = id.includes(':') ? id.split(':').pop()! : id;
+        await apiClient.delete<ApiResponse<string>>(`/api/projects/${rawId}`);
+    }
 }
 
 export const projectRepository = new ProjectRepositoryImpl();

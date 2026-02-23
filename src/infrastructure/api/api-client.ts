@@ -33,5 +33,16 @@ export const apiClient = {
         }
         return response.json();
     },
+    delete: async <T>(path: string): Promise<T> => {
+        const response = await fetch(`${BASE_URL}${path}`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+        });
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || `API Error: ${response.statusText}`);
+        }
+        return response.json();
+    },
 };
 
