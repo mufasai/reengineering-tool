@@ -5,14 +5,16 @@ import type { MaterialTransaction } from "../entities/material.entity";
 
 import type { LoginRequest, LoginResponse } from "../entities/auth.entity";
 
-import type { Project, CreateProjectRequest } from "../entities/project.entity";
+import type { Project, CreateProjectRequest, UpdateProjectRequest } from "../entities/project.entity";
 
 import type { Person, CreatePersonRequest } from "../entities/person.entity";
 
 export interface ProjectRepository {
     findAll(): Promise<Project[]>;
+    findById(id: string): Promise<Project>;
     create(project: CreateProjectRequest): Promise<Project>;
     delete(id: string): Promise<void>;
+    update(id: string, project: UpdateProjectRequest): Promise<Project>;
 }
 
 export interface PeopleRepository {

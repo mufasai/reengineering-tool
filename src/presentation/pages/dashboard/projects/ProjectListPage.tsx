@@ -4,7 +4,7 @@ import AgGridSolid from 'ag-grid-solid';
 import { authStore } from '../../../store/auth.store';
 import CreateProjectForm from './components/CreateProjectForm';
 import { projectRepository } from '../../../../infrastructure/repositories/project.repository.impl';
-import type { Project } from '../../../../domain/entities/project.entity';
+import type { Project, UpdateProjectRequest } from '../../../../domain/entities/project.entity';
 
 const ProjectListPage: Component = () => {
     const { user } = authStore;
@@ -12,6 +12,8 @@ const ProjectListPage: Component = () => {
     const [statusFilter, setStatusFilter] = createSignal('');
     const [showModal, setShowModal] = createSignal(false);
     const [submitting, setSubmitting] = createSignal(false);
+    const [editingProject, setEditingProject] = createSignal<Project | null>(null);
+    const [viewProject, setViewProject] = createSignal<Project | null>(null);
     const [deleteTarget, setDeleteTarget] = createSignal<{ id: string; name: string } | null>(null);
     const [deleting, setDeleting] = createSignal(false);
 
@@ -148,10 +150,10 @@ const ProjectListPage: Component = () => {
                 const project = params.data as Project;
                 return (
                     <div class="flex items-center gap-1.5 h-full">
-                        <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100" title="View">
+                        <button onClick={() => setViewProject(project)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100" title="View">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                         </button>
-                        <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-all border border-slate-100" title="Edit">
+                        <button onClick={() => handleEditProject(project)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-all border border-slate-100" title="Edit">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
                         </button>
                         <button onClick={() => handleDeleteProject(project.id, project.name)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all border border-slate-100" title="Delete">
@@ -163,15 +165,26 @@ const ProjectListPage: Component = () => {
         }
     ];
 
-    const handleCreateProject = async (data: any) => {
+    const handleEditProject = (project: Project) => {
+        setEditingProject(project);
+        setShowModal(true);
+    };
+
+    const handleSaveProject = async (data: any) => {
         setSubmitting(true);
         try {
-            await projectRepository.create(data);
+            const editing = editingProject();
+            if (editing) {
+                await projectRepository.update(editing.id, data as UpdateProjectRequest);
+            } else {
+                await projectRepository.create(data);
+            }
             await refetch();
             setShowModal(false);
+            setEditingProject(null);
         } catch (error) {
-            console.error('Failed to create project:', error);
-            alert('Gagal membuat project: ' + (error as Error).message);
+            console.error('Failed to save project:', error);
+            alert('Gagal menyimpan project: ' + (error as Error).message);
         } finally {
             setSubmitting(false);
         }
@@ -205,7 +218,7 @@ const ProjectListPage: Component = () => {
                     <p class="text-slate-500 mt-2 font-normal">Manage and monitor all reengineering projects.</p>
                 </div>
                 <button
-                    onClick={() => setShowModal(true)}
+                    onClick={() => { setEditingProject(null); setShowModal(true); }}
                     class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95 translate-y-0 hover:translate-y-[-2px]"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14" /></svg>
@@ -303,11 +316,11 @@ const ProjectListPage: Component = () => {
                     <div class="bg-white border border-slate-200 w-full max-w-5xl max-h-[90vh] rounded-[40px] shadow-2xl scale-in-center overflow-hidden flex flex-col">
                         <header class="p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
                             <div>
-                                <h2 class="text-3xl font-black text-blue-600 italic tracking-tight uppercase">Create Project</h2>
-                                <p class="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-[0.2em]">Project • Sites</p>
+                                <h2 class="text-3xl font-black text-blue-600 italic tracking-tight uppercase">{editingProject() ? 'Edit Project' : 'Create Project'}</h2>
+                                <p class="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-[0.2em]">{editingProject() ? 'Update project data' : 'Project • Sites'}</p>
                             </div>
                             <button
-                                onClick={() => setShowModal(false)}
+                                onClick={() => { setShowModal(false); setEditingProject(null); }}
                                 class="w-12 h-12 rounded-2xl bg-slate-50 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center border border-slate-100"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
@@ -316,9 +329,10 @@ const ProjectListPage: Component = () => {
 
                         <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
                             <CreateProjectForm
-                                onSave={handleCreateProject}
-                                onCancel={() => setShowModal(false)}
+                                onSave={handleSaveProject}
+                                onCancel={() => { setShowModal(false); setEditingProject(null); }}
                                 submitting={submitting()}
+                                project={editingProject()}
                             />
                         </div>
                     </div>
@@ -361,6 +375,88 @@ const ProjectListPage: Component = () => {
                         </div>
                     </div>
                 </div>
+            </Show>
+
+            {/* View Project Detail Modal */}
+            <Show when={viewProject()}>
+                {(project) => (
+                    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div class="bg-white border border-slate-200 w-full max-w-3xl max-h-[90vh] rounded-[40px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                            <header class="p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
+                                <div>
+                                    <h2 class="text-3xl font-black text-blue-600 italic tracking-tight uppercase">Project Detail</h2>
+                                    <p class="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-[0.2em]">Read-only view</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        onClick={() => { setViewProject(null); handleEditProject(project()); }}
+                                        class="px-5 py-3 rounded-2xl bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xs transition-all flex items-center gap-2 border border-blue-100"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => setViewProject(null)}
+                                        class="w-12 h-12 rounded-2xl bg-slate-50 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center border border-slate-100"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                            </header>
+
+                            <div class="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8">
+                                {/* Project Name & Description */}
+                                <div class="space-y-2">
+                                    <h3 class="text-2xl font-bold text-slate-900">{project().name}</h3>
+                                    <p class="text-sm text-slate-500 leading-relaxed">{project().keterangan || 'Tidak ada deskripsi.'}</p>
+                                </div>
+
+                                {/* Type & Status Badges */}
+                                <div class="flex items-center gap-3">
+                                    <span class={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border ${getTypeStyles(project().tipe)}`}>
+                                        {project().tipe}
+                                    </span>
+                                    <span class={`px-3 py-1.5 rounded-full border text-[10px] uppercase tracking-tight flex items-center gap-1.5 ${getStatusStyles(project().status)}`}>
+                                        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                        {project().status}
+                                    </span>
+                                </div>
+
+                                {/* Detail Grid */}
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lokasi</p>
+                                        <p class="text-sm font-semibold text-slate-800">{project().lokasi || '-'}</p>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tipe Project</p>
+                                        <p class="text-sm font-semibold text-slate-800">{project().tipe || '-'}</p>
+                                    </div>
+                                    <div class="bg-blue-50 rounded-2xl p-5 border border-blue-100">
+                                        <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Value</p>
+                                        <p class="text-lg font-bold text-blue-700 font-mono">
+                                            {project().value ? `Rp ${project().value.toLocaleString('id-ID')}` : 'Rp 0'}
+                                        </p>
+                                    </div>
+                                    <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+                                        <p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Cost</p>
+                                        <p class="text-lg font-bold text-emerald-700 font-mono">
+                                            {project().cost ? `Rp ${project().cost.toLocaleString('id-ID')}` : 'Rp 0'}
+                                        </p>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tanggal Mulai</p>
+                                        <p class="text-sm font-semibold text-slate-800">{project().tgi_start || '-'}</p>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tanggal Selesai</p>
+                                        <p class="text-sm font-semibold text-slate-800">{project().tgi_end || '-'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </Show>
         </div>
     );

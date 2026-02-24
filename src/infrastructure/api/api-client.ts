@@ -44,5 +44,17 @@ export const apiClient = {
         }
         return response.json();
     },
+    put: async <T>(path: string, body: any): Promise<T> => {
+        const response = await fetch(`${BASE_URL}${path}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || `API Error: ${response.statusText}`);
+        }
+        return response.json();
+    },
 };
 

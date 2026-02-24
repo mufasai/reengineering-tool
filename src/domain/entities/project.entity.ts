@@ -28,3 +28,16 @@ export interface CreateProjectRequest {
     tgi_end: string;
     status: string;
 }
+
+
+export interface UpdateProjectRequest {
+    name: string;
+    lokasi: string;
+    value: number;
+    cost: number;
+    tipe: string;
+    keterangan: string;
+    tgi_start: string;
+    tgi_end: string;
+    status: string;
+}
