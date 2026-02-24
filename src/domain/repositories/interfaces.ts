@@ -1,4 +1,4 @@
-import type { WorkOrder, WOStatus } from "../entities/work-order.entity";
+import type { WorkOrder, WOStatus, Site, CreateSiteRequest } from "../entities/work-order.entity";
 import type { Team, Personnel } from "../entities/team.entity";
 import type { Termin, PaymentStatus } from "../entities/payment.entity";
 import type { MaterialTransaction } from "../entities/material.entity";
@@ -15,6 +15,11 @@ export interface ProjectRepository {
     create(project: CreateProjectRequest): Promise<Project>;
     delete(id: string): Promise<void>;
     update(id: string, project: UpdateProjectRequest): Promise<Project>;
+}
+
+export interface SiteRepository {
+    create(site: CreateSiteRequest): Promise<Site>;
+    findByProjectId(projectId: string): Promise<Site[]>;
 }
 
 export interface PeopleRepository {

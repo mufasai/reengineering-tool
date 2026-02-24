@@ -6,18 +6,51 @@ export type ProjectType = 'COMBAT' | 'L2H' | 'BLACK SITE' | 'REFINEN' | 'FILTER'
 
 export interface Site {
     id: string;
-    siteName: string;
-    siteInfo: string;
+    project_id?: string;
+    site_name: string;
+    site_info: string;
     pekerjaan: string;
     lokasi: string;
-    nomorKontrak: string;
-    start: Date;
-    end: Date;
-    maximalBudget: number;
-    costEstimated: number;
-    pemberiTugas: string;
-    penerimaTugas: string;
-    team: Personnel[]; // Using Personnel from team.entity.ts
+    nomor_kontrak: string;
+    start: string | Date;
+    end: string | Date;
+    maximal_budget: number;
+    cost_estimated: number;
+    pemberi_tugas: string;
+    penerima_tugas: string;
+    site_document: string | null;
+    team?: Personnel[]; // Using Personnel from team.entity.ts
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface CreateSiteRequest {
+    project_id: string;
+    site_name: string;
+    site_info: string;
+    pekerjaan: string;
+    lokasi: string;
+    nomor_kontrak: string;
+    start: string;
+    end: string;
+    maximal_budget: number;
+    cost_estimated: number;
+    pemberi_tugas: string;
+    penerima_tugas: string;
+    site_document: null;
+    team_members: any[];
+}
+
+export interface SiteApiResponse {
+    success: boolean;
+    data: Site;
+    message: string;
+}
+
+export interface SitesListApiResponse {
+    success: boolean;
+    data: Site[];
+    message: string | null;
 }
 
 export interface ProjectFile {

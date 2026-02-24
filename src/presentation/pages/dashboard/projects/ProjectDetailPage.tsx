@@ -1,13 +1,15 @@
-import { createSignal, createMemo, Show, For } from 'solid-js';
+import { createSignal, createMemo, onMount } from 'solid-js';
 import type { Component } from 'solid-js';
 import AgGridSolid from 'ag-grid-solid';
 import type { Project } from '../../../../domain/entities/project.entity';
+import type { Site } from '../../../../domain/entities/work-order.entity';
+import CreateSiteModal from './components/CreateSiteModal';
+import { GetSitesByProjectInteractor } from '../../../../application/use-cases/get-sites-by-project.use-case';
+import { siteRepository } from '../../../../infrastructure/repositories/site.repository.impl';
+
+const getSitesByProjectUseCase = new GetSitesByProjectInteractor(siteRepository);
 
 // Mock data - replace with actual imports
-const mockSites = [
-    { id: 's1', projectId: '1', name: 'Site A', location: 'Jakarta Utara', budget: 100000000, startDate: '2024-01-01', endDate: '2024-06-01', jobName: 'Job A', teamId: 't1' }
-];
-
 const mockFiles = [
     { id: 'f1', projectId: '1', title: 'Design Doc', originalName: 'design.pdf', size: '2.5 MB', type: 'PDF', uploadedAt: '2024-01-15' }
 ];
@@ -27,9 +29,32 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
     // Local state
     const [searchTerm, setSearchTerm] = createSignal('');
     const [fileSearchTerm, setFileSearchTerm] = createSignal('');
+    const [showCreateSiteModal, setShowCreateSiteModal] = createSignal(false);
+    const [sites, setSites] = createSignal<Site[]>([]);
+    const [isLoadingSites, setIsLoadingSites] = createSignal(false);
+
+    const loadSites = async () => {
+        setIsLoadingSites(true);
+        try {
+            const sitesData = await getSitesByProjectUseCase.execute(projectId());
+            setSites(sitesData);
+        } catch (error) {
+            console.error('Failed to load sites:', error);
+        } finally {
+            setIsLoadingSites(false);
+        }
+    };
+
+    onMount(() => {
+        loadSites();
+    });
+
+    const handleSiteCreated = () => {
+        setShowCreateSiteModal(false);
+        loadSites();
+    };
 
     // Data
-    const sites = createMemo(() => mockSites.filter(s => s.projectId === projectId()));
     const files = createMemo(() => mockFiles.filter(f => f.projectId === projectId()));
     const teams = createMemo(() => mockTeams.filter(t => t.projectId === projectId()));
 
@@ -44,8 +69,8 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
     // Filtered sites
     const filteredSites = createMemo(() => {
         return sites().filter(site =>
-            site.name.toLowerCase().includes(searchTerm().toLowerCase()) ||
-            site.location.toLowerCase().includes(searchTerm().toLowerCase())
+            site.site_name.toLowerCase().includes(searchTerm().toLowerCase()) ||
+            site.lokasi.toLowerCase().includes(searchTerm().toLowerCase())
         );
     });
 
@@ -60,10 +85,10 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
     // AG Grid Column Definitions for Sites
     const sitesColumnDefs = [
         {
-            field: 'name',
+            field: 'site_name',
             headerName: 'Site Name',
             flex: 1,
-            minWidth: 200,
+            minWidth: 180,
             cellRenderer: (params: any) => (
                 <button
                     onClick={() => console.log('View site', params.data.id)}
@@ -74,35 +99,77 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
             )
         },
         {
-            field: 'location',
-            headerName: 'Location',
+            field: 'site_info',
+            headerName: 'Site Info',
+            flex: 1,
+            minWidth: 200,
+            cellClass: 'text-slate-700 text-xs'
+        },
+        {
+            field: 'pekerjaan',
+            headerName: 'Pekerjaan',
             flex: 1,
             minWidth: 150,
+            cellClass: 'text-slate-700 text-xs'
+        },
+        {
+            field: 'lokasi',
+            headerName: 'Location',
+            width: 150,
             cellClass: 'text-slate-700'
         },
         {
-            field: 'budget',
-            headerName: 'Budget',
-            width: 150,
-            cellClass: 'text-slate-900 font-medium',
+            field: 'nomor_kontrak',
+            headerName: 'Contract No',
+            width: 130,
+            cellClass: 'text-slate-700 text-xs'
+        },
+        {
+            field: 'start',
+            headerName: 'Start Date',
+            width: 120,
+            cellClass: 'text-slate-700 text-xs'
+        },
+        {
+            field: 'end',
+            headerName: 'End Date',
+            width: 120,
+            cellClass: 'text-slate-700 text-xs'
+        },
+        {
+            field: 'maximal_budget',
+            headerName: 'Max Budget',
+            width: 140,
+            cellClass: 'text-slate-900 font-medium text-xs',
             valueFormatter: (params: any) => `Rp ${params.value.toLocaleString('id-ID')}`
         },
         {
-            field: 'startDate',
-            headerName: 'Schedule',
-            width: 180,
-            cellRenderer: (params: any) => (
-                <div class="flex flex-col text-xs text-slate-600">
-                    <span>{params.value}</span>
-                    <span class="text-slate-400">to {params.data.endDate}</span>
-                </div>
-            )
+            field: 'cost_estimated',
+            headerName: 'Cost Est.',
+            width: 140,
+            cellClass: 'text-slate-900 font-medium text-xs',
+            valueFormatter: (params: any) => `Rp ${params.value.toLocaleString('id-ID')}`
+        },
+        {
+            field: 'pemberi_tugas',
+            headerName: 'Pemberi Tugas',
+            flex: 1,
+            minWidth: 150,
+            cellClass: 'text-slate-700 text-xs'
+        },
+        {
+            field: 'penerima_tugas',
+            headerName: 'Penerima Tugas',
+            flex: 1,
+            minWidth: 150,
+            cellClass: 'text-slate-700 text-xs'
         },
         {
             headerName: 'Actions',
-            width: 150,
+            width: 120,
             sortable: false,
             filter: false,
+            pinned: 'right',
             cellRenderer: () => (
                 <div class="flex justify-end gap-2 h-full items-center">
                     <button class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
@@ -124,7 +191,7 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                 </div>
             )
         }
-    ];
+    ]
 
     // AG Grid Column Definitions for Files
     const filesColumnDefs = [
@@ -355,7 +422,10 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                             </svg>
                             Sites & Progress
                         </h2>
-                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all">
+                        <button
+                            onClick={() => setShowCreateSiteModal(true)}
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all"
+                        >
                             + Add Site
                         </button>
                     </div>
@@ -374,33 +444,42 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                         </div>
 
                         {/* AG Grid Table */}
-                        <div class="ag-theme-alpine w-full h-[400px]" style={{
-                            '--ag-background-color': 'transparent',
-                            '--ag-odd-row-background-color': '#f8fafc',
-                            '--ag-header-background-color': '#f8fafc',
-                            '--ag-border-color': '#e2e8f0',
-                            '--ag-row-hover-color': '#f1f5f9',
-                            '--ag-selected-row-background-color': '#dbeafe',
-                            '--ag-font-family': "'Inter', sans-serif",
-                            '--ag-font-size': '14px',
-                            '--ag-header-foreground-color': '#64748b',
-                            '--ag-header-font-weight': '600',
-                        }}>
-                            <AgGridSolid
-                                columnDefs={sitesColumnDefs}
-                                rowData={filteredSites()}
-                                defaultColDef={{
-                                    sortable: true,
-                                    filter: true,
-                                    resizable: true,
-                                }}
-                                rowHeight={60}
-                                headerHeight={48}
-                                pagination={true}
-                                paginationPageSize={10}
-                                paginationPageSizeSelector={[5, 10, 20]}
-                            />
-                        </div>
+                        {isLoadingSites() ? (
+                            <div class="flex items-center justify-center h-[400px]">
+                                <div class="text-center">
+                                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    <p class="mt-2 text-sm text-slate-500">Loading sites...</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div class="ag-theme-alpine w-full h-[400px]" style={{
+                                '--ag-background-color': 'transparent',
+                                '--ag-odd-row-background-color': '#f8fafc',
+                                '--ag-header-background-color': '#f8fafc',
+                                '--ag-border-color': '#e2e8f0',
+                                '--ag-row-hover-color': '#f1f5f9',
+                                '--ag-selected-row-background-color': '#dbeafe',
+                                '--ag-font-family': "'Inter', sans-serif",
+                                '--ag-font-size': '14px',
+                                '--ag-header-foreground-color': '#64748b',
+                                '--ag-header-font-weight': '600',
+                            }}>
+                                <AgGridSolid
+                                    columnDefs={sitesColumnDefs}
+                                    rowData={filteredSites()}
+                                    defaultColDef={{
+                                        sortable: true,
+                                        filter: true,
+                                        resizable: true,
+                                    }}
+                                    rowHeight={60}
+                                    headerHeight={48}
+                                    pagination={true}
+                                    paginationPageSize={10}
+                                    paginationPageSizeSelector={[5, 10, 20]}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -453,6 +532,15 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                     </div>
                 </div>
             </div>
+
+            {/* Create Site Modal */}
+            {showCreateSiteModal() && (
+                <CreateSiteModal
+                    projectId={projectId()}
+                    onSuccess={handleSiteCreated}
+                    onCancel={() => setShowCreateSiteModal(false)}
+                />
+            )}
         </div>
     );
 };
