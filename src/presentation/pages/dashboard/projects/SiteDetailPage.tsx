@@ -577,8 +577,8 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                 onSuccess={() => {
                     loadMaterials();
                 }}
-                projectId={props.site.project_id || ''}
-                siteId={props.site.id}
+                defaultProjectId={props.site.project_id || ''}
+                defaultSiteId={props.site.id}
             />
         </Show>
     );

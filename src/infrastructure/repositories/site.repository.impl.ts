@@ -14,6 +14,11 @@ export class SiteRepositoryImpl implements SiteRepository {
         return response.data;
     }
 
+    async findAll(): Promise<Site[]> {
+        const response = await apiClient.get<SitesListApiResponse>('/api/sites');
+        return response.data;
+    }
+
     async getFiles(siteId: string): Promise<SiteFile[]> {
         const response = await apiClient.get<{ success: boolean; data: SiteFile[] }>(`/api/sites/${siteId}/files`);
         return response.data;

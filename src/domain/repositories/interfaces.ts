@@ -25,6 +25,7 @@ export interface ProjectRepository {
 export interface SiteRepository {
     create(site: CreateSiteRequest): Promise<Site>;
     findByProjectId(projectId: string): Promise<Site[]>;
+    findAll(): Promise<Site[]>;
     getFiles(siteId: string): Promise<SiteFile[]>;
 }
 

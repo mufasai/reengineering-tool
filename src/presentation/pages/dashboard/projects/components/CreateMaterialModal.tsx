@@ -1,15 +1,19 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, onMount, For } from 'solid-js';
 import type { Component } from 'solid-js';
 import type { CreateMaterialRequest } from '../../../../../domain/entities/material.entity';
+import type { Project } from '../../../../../domain/entities/project.entity';
+import type { Site } from '../../../../../domain/entities/work-order.entity';
 import { MaterialRepositoryImpl } from '../../../../../infrastructure/repositories/material.repository.impl';
 import { CreateMaterialInteractor } from '../../../../../application/use-cases/create-material.use-case';
+import { ProjectRepositoryImpl } from '../../../../../infrastructure/repositories/project.repository.impl';
+import { SiteRepositoryImpl } from '../../../../../infrastructure/repositories/site.repository.impl';
 
 interface CreateMaterialModalProps {
     show: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    projectId: string;
-    siteId: string;
+    defaultProjectId?: string;
+    defaultSiteId?: string;
 }
 
 const CreateMaterialModal: Component<CreateMaterialModalProps> = (props) => {
@@ -18,14 +22,95 @@ const CreateMaterialModal: Component<CreateMaterialModalProps> = (props) => {
     const [unit, setUnit] = createSignal('');
     const [qty, setQty] = createSignal(0);
     const [tgl, setTgl] = createSignal('');
+    const [selectedProjectId, setSelectedProjectId] = createSignal('');
+    const [selectedSiteId, setSelectedSiteId] = createSignal('');
     const [loading, setLoading] = createSignal(false);
     const [error, setError] = createSignal('');
+
+    // Data for dropdowns
+    const [projects, setProjects] = createSignal<Project[]>([]);
+    const [allSites, setAllSites] = createSignal<Site[]>([]);
+    const [loadingProjects, setLoadingProjects] = createSignal(false);
+    const [loadingSites, setLoadingSites] = createSignal(false);
+
+    // Computed: Filter sites based on selected project
+    const filteredSites = () => {
+        if (!selectedProjectId()) return [];
+
+        const filtered = allSites().filter(site => {
+            // Handle both with and without prefix
+            const siteProjectId = site.project_id || '';
+            const selectedId = selectedProjectId();
+
+            // Direct match
+            if (siteProjectId === selectedId) return true;
+
+            // Match without prefix (in case one has prefix and other doesn't)
+            const siteIdWithoutPrefix = siteProjectId.replace('projects:', '');
+            const selectedIdWithoutPrefix = selectedId.replace('projects:', '');
+
+            return siteIdWithoutPrefix === selectedIdWithoutPrefix;
+        });
+
+        console.log('Filtering sites:', {
+            selectedProjectId: selectedProjectId(),
+            totalSites: allSites().length,
+            filteredCount: filtered.length,
+            allSites: allSites().map(s => ({ id: s.id, name: s.site_name, project_id: s.project_id }))
+        });
+
+        return filtered;
+    };
+
+    // Load projects and sites on mount
+    onMount(async () => {
+        await Promise.all([loadProjects(), loadAllSites()]);
+
+        // Set default values if provided
+        if (props.defaultProjectId) {
+            setSelectedProjectId(props.defaultProjectId);
+        }
+        if (props.defaultSiteId) {
+            setSelectedSiteId(props.defaultSiteId);
+        }
+    });
+
+    const loadProjects = async () => {
+        try {
+            setLoadingProjects(true);
+            const projectRepository = new ProjectRepositoryImpl();
+            const projectsData = await projectRepository.findAll();
+            setProjects(projectsData);
+        } catch (err) {
+            console.error('Failed to load projects:', err);
+        } finally {
+            setLoadingProjects(false);
+        }
+    };
+
+    const loadAllSites = async () => {
+        try {
+            setLoadingSites(true);
+            const siteRepository = new SiteRepositoryImpl();
+            const sitesData = await siteRepository.findAll();
+            setAllSites(sitesData);
+        } catch (err) {
+            console.error('Failed to load sites:', err);
+        } finally {
+            setLoadingSites(false);
+        }
+    };
+
+    const handleProjectChange = (projectId: string) => {
+        setSelectedProjectId(projectId);
+        setSelectedSiteId(''); // Reset site selection
+    };
 
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
         setError('');
 
-        if (!skp() || !name() || !unit() || qty() <= 0 || !tgl()) {
+        if (!skp() || !name() || !unit() || qty() <= 0 || !tgl() || !selectedProjectId() || !selectedSiteId()) {
             setError('Semua field harus diisi dengan benar');
             return;
         }
@@ -38,8 +123,8 @@ const CreateMaterialModal: Component<CreateMaterialModalProps> = (props) => {
                 name: name(),
                 unit: unit(),
                 qty: qty(),
-                project_id: props.projectId,
-                site_id: props.siteId,
+                project_id: selectedProjectId(),
+                site_id: selectedSiteId(),
                 tgl: tgl()
             };
 
@@ -53,6 +138,8 @@ const CreateMaterialModal: Component<CreateMaterialModalProps> = (props) => {
             setUnit('');
             setQty(0);
             setTgl('');
+            setSelectedProjectId('');
+            setSelectedSiteId('');
 
             props.onSuccess();
             props.onClose();
@@ -71,6 +158,8 @@ const CreateMaterialModal: Component<CreateMaterialModalProps> = (props) => {
             setUnit('');
             setQty(0);
             setTgl('');
+            setSelectedProjectId('');
+            setSelectedSiteId('');
             setError('');
             props.onClose();
         }
@@ -101,6 +190,50 @@ const CreateMaterialModal: Component<CreateMaterialModalProps> = (props) => {
                                 {error()}
                             </div>
                         )}
+
+                        {/* Project Dropdown */}
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                Project <span class="text-red-500">*</span>
+                            </label>
+                            <select
+                                value={selectedProjectId()}
+                                onChange={(e) => handleProjectChange(e.currentTarget.value)}
+                                required
+                                disabled={loading() || loadingProjects()}
+                                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed"
+                            >
+                                <option value="">Pilih Project</option>
+                                <For each={projects()}>
+                                    {(project) => (
+                                        <option value={project.id}>{project.name}</option>
+                                    )}
+                                </For>
+                            </select>
+                        </div>
+
+                        {/* Site Dropdown */}
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                Site <span class="text-red-500">*</span>
+                            </label>
+                            <select
+                                value={selectedSiteId()}
+                                onChange={(e) => setSelectedSiteId(e.currentTarget.value)}
+                                required
+                                disabled={loading() || loadingSites() || !selectedProjectId()}
+                                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed"
+                            >
+                                <option value="">
+                                    {!selectedProjectId() ? 'Pilih project terlebih dahulu' : loadingSites() ? 'Loading sites...' : 'Pilih Site'}
+                                </option>
+                                <For each={filteredSites()}>
+                                    {(site) => (
+                                        <option value={site.id}>{site.site_name}</option>
+                                    )}
+                                </For>
+                            </select>
+                        </div>
 
                         {/* SKP */}
                         <div>
@@ -181,13 +314,6 @@ const CreateMaterialModal: Component<CreateMaterialModalProps> = (props) => {
                                 disabled={loading()}
                                 class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed"
                             />
-                        </div>
-
-                        {/* Info */}
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <p class="text-sm text-blue-800">
-                                <span class="font-semibold">Info:</span> Material akan ditambahkan ke site dan project yang sedang aktif.
-                            </p>
                         </div>
 
                         {/* Actions */}
