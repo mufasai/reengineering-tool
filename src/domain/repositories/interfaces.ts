@@ -1,7 +1,7 @@
 import type { WorkOrder, WOStatus, Site, CreateSiteRequest } from "../entities/work-order.entity";
 import type { Team, Personnel } from "../entities/team.entity";
 import type { Termin, PaymentStatus } from "../entities/payment.entity";
-import type { MaterialTransaction } from "../entities/material.entity";
+import type { MaterialTransaction, Material } from "../entities/material.entity";
 
 import type { LoginRequest, LoginResponse } from "../entities/auth.entity";
 
@@ -10,6 +10,8 @@ import type { Project, CreateProjectRequest, UpdateProjectRequest } from "../ent
 import type { Person, CreatePersonRequest } from "../entities/person.entity";
 
 import type { ProjectFile } from "../entities/project-file.entity";
+
+import type { SiteFile } from "../entities/site-file.entity";
 
 export interface ProjectRepository {
     findAll(): Promise<Project[]>;
@@ -23,6 +25,7 @@ export interface ProjectRepository {
 export interface SiteRepository {
     create(site: CreateSiteRequest): Promise<Site>;
     findByProjectId(projectId: string): Promise<Site[]>;
+    getFiles(siteId: string): Promise<SiteFile[]>;
 }
 
 export interface PeopleRepository {
@@ -60,4 +63,5 @@ export interface PaymentRepository {
 export interface MaterialRepository {
     findByWorkOrder(workOrderId: string): Promise<MaterialTransaction[]>;
     saveTransaction(transaction: MaterialTransaction): Promise<void>;
+    findBySiteId(siteId: string): Promise<Material[]>;
 }
