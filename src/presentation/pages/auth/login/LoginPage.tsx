@@ -1,5 +1,8 @@
-import { createSignal } from 'solid-js';
+import { createSignal, Show } from 'solid-js';
 import type { Component } from 'solid-js';
+import { AuthRepositoryImpl } from '../../../../infrastructure/repositories/auth.repository.impl';
+import { LoginInteractor } from '../../../../application/use-cases/login.use-case';
+import { authStore } from '../../../store/auth.store';
 
 interface LoginPageProps {
     onLogin: () => void;
@@ -9,15 +12,44 @@ const LoginPage: Component<LoginPageProps> = (props) => {
     const [email, setEmail] = createSignal('');
     const [password, setPassword] = createSignal('');
     const [loading, setLoading] = createSignal(false);
+    const [error, setError] = createSignal<string | null>(null);
+
+    const authRepository = new AuthRepositoryImpl();
+    const loginUseCase = new LoginInteractor(authRepository);
 
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
         setLoading(true);
-        setTimeout(() => {
+        setError(null);
+
+        try {
+            const response = await loginUseCase.execute({
+                email: email(),
+                password: password() as any, // Using the type defined in entity
+            });
+
+            if (response.success) {
+                const user = {
+                    id: response.user.email,
+                    name: response.user.nama,
+                    email: response.user.email,
+                    role: response.user.role.toLowerCase() as any
+                };
+
+                // Securely store user info (optional, but avoids repeat calls)
+                localStorage.setItem('auth_user', JSON.stringify(user));
+                authStore.setAuth(user, true);
+                props.onLogin();
+            } else {
+                setError(response.message || 'Login failed');
+            }
+        } catch (err: any) {
+            setError(err.message || 'An unexpected error occurred');
+        } finally {
             setLoading(false);
-            props.onLogin();
-        }, 1500);
+        }
     };
+
 
     return (
         <div class="min-h-screen w-full flex items-center justify-center bg-[#0a0f1d] bg-[radial-gradient(circle_at_top_left,#1a2b4b,#0a0f1d)] p-4 font-sans text-white">
@@ -60,6 +92,12 @@ const LoginPage: Component<LoginPageProps> = (props) => {
                         <h2 class="text-2xl font-semibold">Welcome back</h2>
                         <p class="text-gray-400 text-sm mt-1">Enter your credentials to access your dashboard</p>
                     </div>
+
+                    <Show when={error()}>
+                        <div class="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                            {error()}
+                        </div>
+                    </Show>
 
                     <form onSubmit={handleSubmit} class="space-y-5">
                         <div class="space-y-2">
