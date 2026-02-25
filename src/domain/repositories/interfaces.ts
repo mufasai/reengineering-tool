@@ -1,7 +1,7 @@
 import type { WorkOrder, WOStatus, Site, CreateSiteRequest } from "../entities/work-order.entity";
 import type { Team, Personnel } from "../entities/team.entity";
 import type { Termin, PaymentStatus } from "../entities/payment.entity";
-import type { MaterialTransaction, Material } from "../entities/material.entity";
+import type { MaterialTransaction, Material, CreateMaterialRequest } from "../entities/material.entity";
 
 import type { LoginRequest, LoginResponse } from "../entities/auth.entity";
 
@@ -64,4 +64,5 @@ export interface MaterialRepository {
     findByWorkOrder(workOrderId: string): Promise<MaterialTransaction[]>;
     saveTransaction(transaction: MaterialTransaction): Promise<void>;
     findBySiteId(siteId: string): Promise<Material[]>;
+    create(material: CreateMaterialRequest): Promise<Material>;
 }

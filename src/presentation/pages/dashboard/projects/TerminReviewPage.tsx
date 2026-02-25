@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js';
 import type { Component } from 'solid-js';
 import type { Site } from '../../../../domain/entities/work-order.entity';
+import InfoTerminCard from './components/InfoTerminCard';
 
 interface TerminReviewPageProps {
     site: Site;
@@ -119,43 +120,13 @@ const TerminReviewPage: Component<TerminReviewPageProps> = (props) => {
                     {/* Right Column - Info & Workflow */}
                     <div class="lg:col-span-1 space-y-6">
                         {/* Info Termin */}
-                        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                            <h3 class="text-lg font-bold text-slate-900 mb-4">Info Termin</h3>
-
-                            <div class="space-y-3">
-                                <div>
-                                    <p class="text-xs text-slate-500 mb-1">Type</p>
-                                    <p class="text-sm font-semibold text-slate-900">: TERMIN_{props.terminNumber}</p>
-                                </div>
-
-                                <div>
-                                    <p class="text-xs text-slate-500 mb-1">Jumlah</p>
-                                    <p class="text-sm font-semibold text-slate-900">: Rp {jumlahTermin().toLocaleString('id-ID')}</p>
-                                </div>
-
-                                <div>
-                                    <p class="text-xs text-slate-500 mb-1">Tgl Termin</p>
-                                    <p class="text-sm font-semibold text-slate-900">: 20/02/2026</p>
-                                </div>
-
-                                <div>
-                                    <p class="text-xs text-slate-500 mb-1">Site</p>
-                                    <p class="text-sm font-semibold text-slate-900">: {props.site.site_name}</p>
-                                </div>
-
-                                <div>
-                                    <p class="text-xs text-slate-500 mb-1">Project</p>
-                                    <p class="text-sm font-semibold text-slate-900">: Example Project Fiber</p>
-                                </div>
-
-                                <div>
-                                    <p class="text-xs text-slate-500 mb-1">Status</p>
-                                    <span class="inline-block px-3 py-1 bg-yellow-400 text-slate-900 text-xs font-semibold rounded">
-                                        Pending Review
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                        <InfoTerminCard
+                            terminNumber={props.terminNumber}
+                            type={`TERMIN_${props.terminNumber}`}
+                            jumlah={jumlahTermin()}
+                            site={props.site}
+                            projectName="Example Project Fiber"
+                        />
 
                         {/* Workflow */}
                         <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">

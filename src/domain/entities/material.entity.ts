@@ -21,3 +21,13 @@ export interface Material {
     created_at: string;
     updated_at: string;
 }
+
+export interface CreateMaterialRequest {
+    skp: string;
+    name: string;
+    unit: string;
+    qty: number;
+    project_id: string;
+    site_id: string;
+    tgl: string;
+}

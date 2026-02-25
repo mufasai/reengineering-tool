@@ -15,6 +15,7 @@ import TerminSubmissionPage from './TerminSubmissionPage';
 import TerminDetailPage from './TerminDetailPage';
 import TerminReviewPage from './TerminReviewPage';
 import TerminPaymentPage from './TerminPaymentPage';
+import CreateMaterialModal from './components/CreateMaterialModal';
 
 interface SiteDetailPageProps {
     site: Site;
@@ -47,6 +48,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     // Materials data from API
     const [materials, setMaterials] = createSignal<Material[]>([]);
     const [loadingMaterials, setLoadingMaterials] = createSignal(false);
+    const [showCreateMaterialModal, setShowCreateMaterialModal] = createSignal(false);
 
     // Site files data from API
     const [siteFiles, setSiteFiles] = createSignal<SiteFile[]>([]);
@@ -516,7 +518,10 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center">
                         <h3 class="text-lg font-bold text-slate-900">Materials</h3>
-                        <button class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all">
+                        <button
+                            onClick={() => setShowCreateMaterialModal(true)}
+                            class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all"
+                        >
                             + Add Material
                         </button>
                     </div>
@@ -564,6 +569,17 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                     <p class="text-sm text-slate-500">Belum ada termins</p>
                 </div>
             </div>
+
+            {/* Create Material Modal */}
+            <CreateMaterialModal
+                show={showCreateMaterialModal()}
+                onClose={() => setShowCreateMaterialModal(false)}
+                onSuccess={() => {
+                    loadMaterials();
+                }}
+                projectId={props.site.project_id || ''}
+                siteId={props.site.id}
+            />
         </Show>
     );
 };
