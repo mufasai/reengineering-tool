@@ -1,9 +1,15 @@
+import { createSignal } from 'solid-js';
 import type { Component } from 'solid-js';
 import type { Site } from '../../../../domain/entities/work-order.entity';
+import type { TerminSubmission } from '../../../../domain/entities/termin-submission.entity';
+import { TerminRepositoryImpl } from '../../../../infrastructure/repositories/termin.repository.impl';
+import { ApproveTerminInteractor } from '../../../../application/use-cases/approve-termin.use-case';
+import { authStore } from '../../../../presentation/store/auth.store';
 
 interface TerminDetailPageProps {
     site: Site;
     terminNumber: number;
+    terminData?: TerminSubmission | null;
     onBack: () => void;
     onReview?: () => void;
     onApprove?: () => void;
@@ -13,17 +19,38 @@ interface TerminDetailPageProps {
 }
 
 const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
-    // Create reactive data based on initialStatus prop
-    const terminData = () => {
+    const [loading, setLoading] = createSignal(false);
+    const [error, setError] = createSignal('');
+
+    // Use terminData from props if available, otherwise use mock data
+    const getTerminData = () => {
+        if (props.terminData) {
+            return {
+                id: props.terminData.id,
+                type: props.terminData.type_termin,
+                tanggal: new Date(props.terminData.tgl_terima).toLocaleDateString('id-ID'),
+                jumlah: props.terminData.jumlah,
+                keterangan: props.terminData.keterangan,
+                dibuat: new Date(props.terminData.created_at).toLocaleString('id-ID'),
+                diperbarui: new Date(props.terminData.updated_at).toLocaleString('id-ID'),
+                status: props.terminData.status,
+                reviewedBy: props.terminData.reviewed_by,
+                reviewedAt: props.terminData.reviewed_by ? new Date(props.terminData.updated_at).toLocaleString('id-ID') : null,
+                submittedBy: props.terminData.submitted_by,
+            };
+        }
+
+        // Fallback to mock data
         const status = props.initialStatus || 'pending_review';
         const baseData = {
             id: `termin_${props.terminNumber}`,
-            type: `termin_${props.terminNumber}`,
+            type: `TERMIN_${props.terminNumber}`,
             tanggal: '20/02/2026',
             jumlah: 400000000,
             keterangan: `pengajuan termin ${props.terminNumber}`,
             dibuat: '20/02/2026 14:35',
             status: status,
+            submittedBy: 'Unknown User',
         };
 
         // If status is approved or finance_payment, show reviewed and approved info
@@ -53,13 +80,16 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
         };
     };
 
+    const terminData = getTerminData;
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'pending_review':
             case 'field_head_review':
                 return { text: 'Pending Review', class: 'bg-yellow-400 text-slate-900' };
+            case 'reviewed':
             case 'director_approval':
-                return { text: 'Pending', class: 'bg-yellow-400 text-slate-900' };
+                return { text: 'Reviewed - Pending Approval', class: 'bg-yellow-400 text-slate-900' };
             case 'finance_payment':
             case 'approved':
                 return { text: 'Approved', class: 'bg-cyan-500 text-white' };
@@ -73,6 +103,7 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
     };
 
     const getAlertMessage = (status: string) => {
+        const data = terminData();
         switch (status) {
             case 'pending_review':
             case 'field_head_review':
@@ -84,10 +115,14 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                     showPaymentButton: false,
                     alertColor: 'yellow'
                 };
+            case 'reviewed':
             case 'director_approval':
+                const reviewInfo = data.reviewedBy && data.reviewedAt
+                    ? `Direview oleh: ${data.reviewedBy} pada ${data.reviewedAt}\n`
+                    : '';
                 return {
                     title: 'Menunggu Persetujuan Direktur',
-                    message: 'Termin ini sudah disetujui field head dan menunggu persetujuan direktur',
+                    message: `${reviewInfo}Termin ini sudah disetujui field head dan menunggu persetujuan direktur`,
                     showReviewButton: false,
                     showApproveButtons: true,
                     showPaymentButton: false,
@@ -115,19 +150,69 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
         }
     };
 
-    const handleApproveTermin = () => {
-        console.log('Approve termin');
-        // Add approval logic here
-        if (props.onApprove) {
-            props.onApprove();
+    const handleApproveTermin = async () => {
+        if (!props.terminData) {
+            setError('Data termin tidak ditemukan');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError('');
+
+            const approverName = authStore.user()?.name || 'Admin SmartElco';
+
+            const terminRepository = new TerminRepositoryImpl();
+            const approveTerminUseCase = new ApproveTerminInteractor(terminRepository);
+
+            await approveTerminUseCase.execute(props.terminData.id, {
+                approver_name: approverName,
+                catatan_approval: 'Disetujui untuk pembayaran',
+                approve: true
+            });
+
+            console.log('Termin approved by director');
+            if (props.onApprove) {
+                props.onApprove();
+            }
+        } catch (err: any) {
+            console.error('Failed to approve termin:', err);
+            setError(err.message || 'Gagal menyetujui termin. Silakan coba lagi.');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleRejectTermin = () => {
-        console.log('Reject termin');
-        // Add rejection logic here
-        if (props.onReject) {
-            props.onReject();
+    const handleRejectTermin = async () => {
+        if (!props.terminData) {
+            setError('Data termin tidak ditemukan');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError('');
+
+            const approverName = authStore.user()?.name || 'Admin SmartElco';
+
+            const terminRepository = new TerminRepositoryImpl();
+            const approveTerminUseCase = new ApproveTerminInteractor(terminRepository);
+
+            await approveTerminUseCase.execute(props.terminData.id, {
+                approver_name: approverName,
+                catatan_approval: 'Ditolak oleh direktur',
+                approve: false
+            });
+
+            console.log('Termin rejected by director');
+            if (props.onReject) {
+                props.onReject();
+            }
+        } catch (err: any) {
+            console.error('Failed to reject termin:', err);
+            setError(err.message || 'Gagal menolak termin. Silakan coba lagi.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -262,27 +347,36 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                                             )}
 
                                             {alert.showApproveButtons && (
-                                                <div class="flex gap-2">
-                                                    <button
-                                                        onClick={handleApproveTermin}
-                                                        class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                                        </svg>
-                                                        Setujui Termin
-                                                    </button>
-                                                    <button
-                                                        onClick={handleRejectTermin}
-                                                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                                        </svg>
-                                                        Tolak Termin
-                                                    </button>
-                                                </div>
+                                                <>
+                                                    {error() && (
+                                                        <div class="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-xs">
+                                                            {error()}
+                                                        </div>
+                                                    )}
+                                                    <div class="flex gap-2">
+                                                        <button
+                                                            onClick={handleApproveTermin}
+                                                            disabled={loading()}
+                                                            class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                                            </svg>
+                                                            {loading() ? 'Memproses...' : 'Setujui Termin'}
+                                                        </button>
+                                                        <button
+                                                            onClick={handleRejectTermin}
+                                                            disabled={loading()}
+                                                            class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                            </svg>
+                                                            {loading() ? 'Memproses...' : 'Tolak Termin'}
+                                                        </button>
+                                                    </div>
+                                                </>
                                             )}
 
                                             {alert.showPaymentButton && (

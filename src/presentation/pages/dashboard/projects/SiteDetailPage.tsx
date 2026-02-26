@@ -3,6 +3,7 @@ import type { Component } from 'solid-js';
 import type { Site } from '../../../../domain/entities/work-order.entity';
 import type { Material } from '../../../../domain/entities/material.entity';
 import type { SiteFile } from '../../../../domain/entities/site-file.entity';
+import type { TerminSubmission } from '../../../../domain/entities/termin-submission.entity';
 import AgGridSolid from 'ag-grid-solid';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
@@ -11,6 +12,7 @@ import { MaterialRepositoryImpl } from '../../../../infrastructure/repositories/
 import { GetMaterialsBySiteInteractor } from '../../../../application/use-cases/get-materials-by-site.use-case';
 import { SiteRepositoryImpl } from '../../../../infrastructure/repositories/site.repository.impl';
 import { GetSiteFilesInteractor } from '../../../../application/use-cases/get-site-files.use-case';
+import { TerminRepositoryImpl } from '../../../../infrastructure/repositories/termin.repository.impl';
 import TerminSubmissionPage from './TerminSubmissionPage';
 import TerminDetailPage from './TerminDetailPage';
 import TerminReviewPage from './TerminReviewPage';
@@ -30,13 +32,27 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     const [showTerminPayment, setShowTerminPayment] = createSignal(false);
     const [selectedTerminNumber, setSelectedTerminNumber] = createSignal(1);
     const [terminStatus, setTerminStatus] = createSignal<'pending_review' | 'director_approval' | 'approved'>('pending_review');
+    const [currentTerminData, setCurrentTerminData] = createSignal<TerminSubmission | null>(null);
 
-    // Mock data for termins
+    // Store termin IDs for each termin number (persisted in localStorage)
+    const getStoredTerminId = (terminNumber: number): string | null => {
+        const siteId = props.site.id.split(':')[1];
+        const key = `termin_${siteId}_${terminNumber}`;
+        return localStorage.getItem(key);
+    };
+
+    const storeTerminId = (terminNumber: number, terminId: string) => {
+        const siteId = props.site.id.split(':')[1];
+        const key = `termin_${siteId}_${terminNumber}`;
+        localStorage.setItem(key, terminId);
+    };
+
+    // Mock data for termins with new percentage rules: 30% -> 50% -> 10% -> 10%
     const termins = [
-        { id: 1, name: 'Termin 1', status: 'active', progress: 0, description: 'Pembayaran termin pertama' },
-        { id: 2, name: 'Termin 2', status: 'pending', progress: 0, description: 'Pembayaran termin kedua' },
-        { id: 3, name: 'Termin 3', status: 'pending', progress: 0, description: 'Pembayaran termin ketiga' },
-        { id: 4, name: 'Termin 4', status: 'pending', progress: 0, description: 'Pembayaran termin keempat' },
+        { id: 1, name: 'Termin 1', status: 'active', progress: 0, description: 'Pembayaran termin pertama (30% dari 70% nilai site)', percentage: 30 },
+        { id: 2, name: 'Termin 2', status: 'pending', progress: 0, description: 'Pembayaran termin kedua (50% dari 70% nilai site)', percentage: 50 },
+        { id: 3, name: 'Termin 3', status: 'pending', progress: 0, description: 'Pembayaran termin ketiga (10% dari 70% nilai site)', percentage: 10 },
+        { id: 4, name: 'Termin 4', status: 'pending', progress: 0, description: 'Pembayaran termin keempat (10% dari 70% nilai site)', percentage: 10 },
     ];
 
     // Mock data for team
@@ -87,6 +103,86 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
             console.error('Failed to load site files:', error);
         } finally {
             setLoadingSiteFiles(false);
+        }
+    };
+
+    // Check if previous termin is approved
+    const isPreviousTerminApproved = async (terminNumber: number): Promise<boolean> => {
+        if (terminNumber === 1) {
+            return true; // Termin 1 can always be submitted
+        }
+
+        const previousTerminId = getStoredTerminId(terminNumber - 1);
+        if (!previousTerminId) {
+            return false; // Previous termin doesn't exist
+        }
+
+        try {
+            const terminRepository = new TerminRepositoryImpl();
+            const previousTerminData = await terminRepository.findById(previousTerminId);
+
+            if (!previousTerminData) {
+                return false;
+            }
+
+            // Check if previous termin is approved (completed payment)
+            return previousTerminData.status === 'completed' || previousTerminData.status === 'approved';
+        } catch (error) {
+            console.error('Failed to check previous termin:', error);
+            return false;
+        }
+    };
+
+    const checkAndLoadTermin = async (terminNumber: number) => {
+        try {
+            const storedTerminId = getStoredTerminId(terminNumber);
+
+            if (!storedTerminId) {
+                return false; // No termin exists yet
+            }
+
+            const terminRepository = new TerminRepositoryImpl();
+            const terminData = await terminRepository.findById(storedTerminId);
+
+            if (terminData) {
+                // Termin sudah ada, set data dan status
+                setCurrentTerminData(terminData);
+                setTerminStatus(terminData.status as any);
+
+                // Redirect based on status
+                if (terminData.status === 'pending_review' || terminData.status === 'field_head_review') {
+                    // Jika masih pending review, langsung ke halaman review
+                    setShowTerminReview(true);
+                } else {
+                    // Untuk status lainnya (reviewed, director_approval, approved, dll), tampilkan detail
+                    setShowTerminDetail(true);
+                }
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Failed to check termin:', error);
+            return false;
+        }
+    };
+
+    const handleAjukanTermin = async (terminNumber: number) => {
+        setSelectedTerminNumber(terminNumber);
+
+        // Check if previous termin is approved (except for termin 1)
+        const canSubmit = await isPreviousTerminApproved(terminNumber);
+
+        if (!canSubmit) {
+            alert(`Termin ${terminNumber} hanya bisa diajukan setelah Termin ${terminNumber - 1} disetujui dan dibayar.`);
+            return;
+        }
+
+        // Check if termin already exists
+        const terminExists = await checkAndLoadTermin(terminNumber);
+
+        if (!terminExists) {
+            // Termin belum ada, tampilkan form submission
+            setShowTerminSubmission(true);
         }
     };
 
@@ -252,15 +348,35 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                     <TerminReviewPage
                                         site={props.site}
                                         terminNumber={selectedTerminNumber()}
+                                        terminData={currentTerminData()}
                                         onBack={() => setShowTerminReview(false)}
-                                        onApprove={() => {
+                                        onApprove={async () => {
                                             console.log('Field Head approved, moving to Director Approval');
-                                            setTerminStatus('director_approval');
+                                            // Reload termin data to get updated status
+                                            const terminId = currentTerminData()?.id;
+                                            if (terminId) {
+                                                const terminRepository = new TerminRepositoryImpl();
+                                                const updatedTerminData = await terminRepository.findById(terminId);
+                                                if (updatedTerminData) {
+                                                    setCurrentTerminData(updatedTerminData);
+                                                    setTerminStatus(updatedTerminData.status as any);
+                                                }
+                                            }
                                             setShowTerminReview(false);
                                             setShowTerminDetail(true);
                                         }}
-                                        onReject={() => {
+                                        onReject={async () => {
                                             console.log('Field Head rejected');
+                                            // Reload termin data to get updated status
+                                            const terminId = currentTerminData()?.id;
+                                            if (terminId) {
+                                                const terminRepository = new TerminRepositoryImpl();
+                                                const updatedTerminData = await terminRepository.findById(terminId);
+                                                if (updatedTerminData) {
+                                                    setCurrentTerminData(updatedTerminData);
+                                                    setTerminStatus(updatedTerminData.status as any);
+                                                }
+                                            }
                                             setShowTerminReview(false);
                                             setShowTerminDetail(true);
                                         }}
@@ -271,25 +387,44 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                             <TerminDetailPage
                                 site={props.site}
                                 terminNumber={selectedTerminNumber()}
+                                terminData={currentTerminData()}
                                 initialStatus={terminStatus()}
                                 onBack={() => {
                                     setShowTerminDetail(false);
                                     setTerminStatus('pending_review'); // Reset status
+                                    setCurrentTerminData(null);
                                 }}
                                 onReview={() => {
                                     setShowTerminDetail(false);
                                     setShowTerminReview(true);
                                 }}
-                                onApprove={() => {
+                                onApprove={async () => {
                                     console.log('Director approved termin, moving to payment');
-                                    setTerminStatus('approved');
+                                    // Reload termin data to get updated status
+                                    const terminId = currentTerminData()?.id;
+                                    if (terminId) {
+                                        const terminRepository = new TerminRepositoryImpl();
+                                        const updatedTerminData = await terminRepository.findById(terminId);
+                                        if (updatedTerminData) {
+                                            setCurrentTerminData(updatedTerminData);
+                                            setTerminStatus(updatedTerminData.status as any);
+                                        }
+                                    }
                                     // Status change will trigger reactive update in TerminDetailPage
                                 }}
-                                onReject={() => {
+                                onReject={async () => {
                                     console.log('Director rejected termin');
+                                    // Reload termin data to get updated status
+                                    const terminId = currentTerminData()?.id;
+                                    if (terminId) {
+                                        const terminRepository = new TerminRepositoryImpl();
+                                        const updatedTerminData = await terminRepository.findById(terminId);
+                                        if (updatedTerminData) {
+                                            setCurrentTerminData(updatedTerminData);
+                                            setTerminStatus(updatedTerminData.status as any);
+                                        }
+                                    }
                                     alert('Termin ditolak oleh Direktur!');
-                                    setShowTerminDetail(false);
-                                    setTerminStatus('pending_review'); // Reset status
                                 }}
                                 onPayment={() => {
                                     console.log('Navigate to payment page');
@@ -304,9 +439,12 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                         site={props.site}
                         terminNumber={selectedTerminNumber()}
                         onBack={() => setShowTerminSubmission(false)}
-                        onSubmitSuccess={() => {
+                        onSubmitSuccess={async (terminData) => {
                             console.log('Termin submitted, showing detail with pending_review status');
-                            setTerminStatus('pending_review');
+                            // Store termin ID for future reference
+                            storeTerminId(selectedTerminNumber(), terminData.id);
+                            setCurrentTerminData(terminData);
+                            setTerminStatus(terminData.status as any);
                             setShowTerminSubmission(false);
                             setShowTerminDetail(true);
                         }}
@@ -377,8 +515,11 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                         <div class="mb-2">
                                             <div class="flex items-center gap-2 mb-2">
                                                 <span class="font-bold text-slate-900">{termin.name}</span>
+                                                <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-semibold">
+                                                    {termin.percentage}%
+                                                </span>
                                                 <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">
-                                                    {termin.progress}%
+                                                    Progress: {termin.progress}%
                                                 </span>
                                                 {termin.status === 'completed' && (
                                                     <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold">
@@ -396,10 +537,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                                         Sedang Dikerjakan
                                                     </span>
                                                     <button
-                                                        onClick={() => {
-                                                            setSelectedTerminNumber(termin.id);
-                                                            setShowTerminSubmission(true);
-                                                        }}
+                                                        onClick={() => handleAjukanTermin(termin.id)}
                                                         class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all"
                                                     >
                                                         Ajukan Termin {termin.id}
@@ -456,8 +594,12 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                         <h2 class="text-lg font-bold text-slate-900 mb-4">Informasi Lainnya</h2>
                         <div class="space-y-3">
                             <div class="flex justify-between py-2 border-b border-slate-100">
-                                <span class="text-sm text-slate-500">Max Value</span>
+                                <span class="text-sm text-slate-500">Max Value (Site)</span>
                                 <span class="text-sm font-medium text-slate-900">Rp {props.site.maximal_budget.toLocaleString('id-ID')}</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-slate-100">
+                                <span class="text-sm text-slate-500">Max Payment (70%)</span>
+                                <span class="text-sm font-medium text-emerald-600">Rp {Math.floor(props.site.maximal_budget * 0.7).toLocaleString('id-ID')}</span>
                             </div>
                             <div class="flex justify-between py-2 border-b border-slate-100">
                                 <span class="text-sm text-slate-500">Cost Estimate</span>

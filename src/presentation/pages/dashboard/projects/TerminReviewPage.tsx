@@ -1,11 +1,16 @@
-import { createSignal } from 'solid-js';
+import { createSignal, Show } from 'solid-js';
 import type { Component } from 'solid-js';
 import type { Site } from '../../../../domain/entities/work-order.entity';
+import type { TerminSubmission } from '../../../../domain/entities/termin-submission.entity';
 import InfoTerminCard from './components/InfoTerminCard';
+import { TerminRepositoryImpl } from '../../../../infrastructure/repositories/termin.repository.impl';
+import { ReviewTerminInteractor } from '../../../../application/use-cases/review-termin.use-case';
+import { authStore } from '../../../../presentation/store/auth.store';
 
 interface TerminReviewPageProps {
     site: Site;
     terminNumber: number;
+    terminData?: TerminSubmission | null;
     onBack: () => void;
     onApprove?: () => void;
     onReject?: () => void;
@@ -13,21 +18,105 @@ interface TerminReviewPageProps {
 
 const TerminReviewPage: Component<TerminReviewPageProps> = (props) => {
     const [catatanReview, setCatatanReview] = createSignal('');
-    const [jumlahTermin] = createSignal(400000000);
-    const [submitter] = createSignal('N/A');
-    const [tanggalSubmit] = createSignal('20/02/2026 14:35');
+    const [loading, setLoading] = createSignal(false);
+    const [error, setError] = createSignal('');
 
-    const handleApprove = () => {
-        console.log('Approve termin with review:', catatanReview());
-        if (props.onApprove) {
-            props.onApprove();
+    const getTerminData = () => {
+        if (props.terminData) {
+            return {
+                jumlah: props.terminData.jumlah,
+                submitter: props.terminData.submitted_by,
+                tanggalSubmit: new Date(props.terminData.submitted_at).toLocaleString('id-ID', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+            };
+        }
+        return {
+            jumlah: 400000000,
+            submitter: 'N/A',
+            tanggalSubmit: '20/02/2026 14:35'
+        };
+    };
+
+    const terminData = getTerminData();
+
+    const handleApprove = async () => {
+        if (!catatanReview().trim()) {
+            setError('Catatan review harus diisi');
+            return;
+        }
+
+        if (!props.terminData) {
+            setError('Data termin tidak ditemukan');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError('');
+
+            const reviewerName = authStore.user()?.name || 'Unknown Reviewer';
+
+            const terminRepository = new TerminRepositoryImpl();
+            const reviewTerminUseCase = new ReviewTerminInteractor(terminRepository);
+
+            await reviewTerminUseCase.execute(props.terminData.id, {
+                reviewer_name: reviewerName,
+                catatan_review: catatanReview(),
+                approve: true
+            });
+
+            console.log('Termin approved and forwarded to director');
+            if (props.onApprove) {
+                props.onApprove();
+            }
+        } catch (err: any) {
+            console.error('Failed to approve termin:', err);
+            setError(err.message || 'Gagal menyetujui termin. Silakan coba lagi.');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleReject = () => {
-        console.log('Reject termin with review:', catatanReview());
-        if (props.onReject) {
-            props.onReject();
+    const handleReject = async () => {
+        if (!catatanReview().trim()) {
+            setError('Catatan review harus diisi');
+            return;
+        }
+
+        if (!props.terminData) {
+            setError('Data termin tidak ditemukan');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError('');
+
+            const reviewerName = authStore.user()?.name || 'Unknown Reviewer';
+
+            const terminRepository = new TerminRepositoryImpl();
+            const reviewTerminUseCase = new ReviewTerminInteractor(terminRepository);
+
+            await reviewTerminUseCase.execute(props.terminData.id, {
+                reviewer_name: reviewerName,
+                catatan_review: catatanReview(),
+                approve: false
+            });
+
+            console.log('Termin rejected');
+            if (props.onReject) {
+                props.onReject();
+            }
+        } catch (err: any) {
+            console.error('Failed to reject termin:', err);
+            setError(err.message || 'Gagal menolak termin. Silakan coba lagi.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -57,23 +146,29 @@ const TerminReviewPage: Component<TerminReviewPageProps> = (props) => {
                         <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                             <h2 class="text-lg font-bold text-slate-900 mb-6">Form Review Field Head</h2>
 
+                            {error() && (
+                                <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                                    {error()}
+                                </div>
+                            )}
+
                             <div class="space-y-6">
                                 {/* Jumlah Termin - Highlighted */}
                                 <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
-                                    <p class="text-sm font-semibold text-slate-700 mb-2">Jumlah Termin: Rp {jumlahTermin().toLocaleString('id-ID')}</p>
+                                    <p class="text-sm font-semibold text-slate-700 mb-2">Jumlah Termin: Rp {terminData.jumlah.toLocaleString('id-ID')}</p>
                                 </div>
 
                                 {/* Submitter */}
                                 <div>
                                     <p class="text-sm text-slate-600">
-                                        <span class="font-semibold">Submitter:</span> {submitter()}
+                                        <span class="font-semibold">Submitter:</span> {terminData.submitter}
                                     </p>
                                 </div>
 
                                 {/* Tanggal Submit */}
                                 <div>
                                     <p class="text-sm text-slate-600">
-                                        <span class="font-semibold">Tanggal Submit:</span> {tanggalSubmit()}
+                                        <span class="font-semibold">Tanggal Submit:</span> {terminData.tanggalSubmit}
                                     </p>
                                 </div>
 
@@ -86,7 +181,8 @@ const TerminReviewPage: Component<TerminReviewPageProps> = (props) => {
                                         value={catatanReview()}
                                         onInput={(e) => setCatatanReview(e.currentTarget.value)}
                                         rows={6}
-                                        class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                        disabled={loading()}
+                                        class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-slate-100 disabled:cursor-not-allowed"
                                         placeholder="review oleh head area"
                                     />
                                 </div>
@@ -95,22 +191,24 @@ const TerminReviewPage: Component<TerminReviewPageProps> = (props) => {
                                 <div class="flex gap-3 pt-4">
                                     <button
                                         onClick={handleApprove}
-                                        class="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+                                        disabled={loading()}
+                                        class="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition-all flex items-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <polyline points="20 6 9 17 4 12"></polyline>
                                         </svg>
-                                        Setujui & Teruskan ke Direktur
+                                        {loading() ? 'Memproses...' : 'Setujui & Teruskan ke Direktur'}
                                     </button>
                                     <button
                                         onClick={handleReject}
-                                        class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+                                        disabled={loading()}
+                                        class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all flex items-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <line x1="18" y1="6" x2="6" y2="18"></line>
                                             <line x1="6" y1="6" x2="18" y2="18"></line>
                                         </svg>
-                                        Tolak (Kembali ke Draft)
+                                        {loading() ? 'Memproses...' : 'Tolak (Kembali ke Draft)'}
                                     </button>
                                 </div>
                             </div>
@@ -123,7 +221,7 @@ const TerminReviewPage: Component<TerminReviewPageProps> = (props) => {
                         <InfoTerminCard
                             terminNumber={props.terminNumber}
                             type={`TERMIN_${props.terminNumber}`}
-                            jumlah={jumlahTermin()}
+                            jumlah={terminData.jumlah}
                             site={props.site}
                             projectName="Example Project Fiber"
                         />
