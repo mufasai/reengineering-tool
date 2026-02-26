@@ -13,6 +13,8 @@ import type { ProjectFile } from "../entities/project-file.entity";
 
 import type { SiteFile } from "../entities/site-file.entity";
 
+import type { CreateTerminRequest, TerminSubmission, ReviewTerminRequest, ApproveTerminRequest } from "../entities/termin-submission.entity";
+
 export interface ProjectRepository {
     findAll(): Promise<Project[]>;
     findById(id: string): Promise<Project>;
@@ -66,4 +68,12 @@ export interface MaterialRepository {
     saveTransaction(transaction: MaterialTransaction): Promise<void>;
     findBySiteId(siteId: string): Promise<Material[]>;
     create(material: CreateMaterialRequest): Promise<Material>;
+}
+
+export interface TerminRepository {
+    create(termin: CreateTerminRequest): Promise<TerminSubmission>;
+    findById(terminId: string): Promise<TerminSubmission | null>;
+    findBySiteAndNumber(siteId: string, terminNumber: number): Promise<TerminSubmission | null>;
+    review(terminId: string, review: ReviewTerminRequest): Promise<TerminSubmission>;
+    approve(terminId: string, approval: ApproveTerminRequest): Promise<TerminSubmission>;
 }
