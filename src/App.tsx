@@ -1,10 +1,12 @@
-import { createSignal, Show, Switch, Match, onMount } from 'solid-js';
+import { createSignal, Show, Switch, Match, onMount, createEffect } from 'solid-js';
 import type { Component } from 'solid-js';
 import HomePage from './presentation/pages/dashboard/home/HomePage';
 import LoginPage from './presentation/pages/auth/login/LoginPage';
+import RegisterPage from './presentation/pages/auth/register/RegisterPage';
 import WorkOrdersPage from './presentation/pages/dashboard/wo/WorkOrdersPage';
 import ProjectListPage from './presentation/pages/dashboard/projects/ProjectListPage';
 import PeoplePage from './presentation/pages/dashboard/people/PeoplePage';
+import UserManagementPage from './presentation/pages/dashboard/system/UserManagementPage';
 import Sidebar from './presentation/components/layout/Sidebar';
 import Header from './presentation/components/layout/Header';
 import { authStore } from './presentation/store/auth.store';
@@ -12,34 +14,51 @@ import './index.css';
 
 const App: Component = () => {
   const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'PEOPLE' | 'TEAMS' | 'SYSTEM' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN'>('DASHBOARD');
+  const [authView, setAuthView] = createSignal<'login' | 'register'>('login');
+  const [isLoggedIn, setIsLoggedIn] = createSignal(false);
 
   onMount(() => {
+    // Check if user was previously logged in
     const token = localStorage.getItem('auth_token');
     const userStr = localStorage.getItem('auth_user');
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
         authStore.setAuth(user, true);
+        setIsLoggedIn(true);
       } catch (e) {
-        authStore.logout();
+        // Invalid data, clear it
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
       }
-    } else {
-      authStore.setAuth(null, false);
     }
   });
 
+  // Sync with authStore
+  createEffect(() => {
+    const authenticated = authStore.isAuthenticated();
+    console.log('Auth state changed:', authenticated);
+    setIsLoggedIn(authenticated);
+  });
+
   return (
-    <Show
-      when={!authStore.loading()}
-      fallback={
-        <div class="min-h-screen bg-[#0a0f1d] flex items-center justify-center">
-          <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-        </div>
-      }
-    >
+    <>
       <Show
-        when={authStore.isAuthenticated()}
-        fallback={<LoginPage onLogin={() => { }} />}
+        when={isLoggedIn()}
+        fallback={
+          <Show
+            when={authView() === 'login'}
+            fallback={
+              <RegisterPage
+                onBackToLogin={() => setAuthView('login')}
+              />
+            }
+          >
+            <LoginPage
+              onRegister={() => setAuthView('register')}
+            />
+          </Show>
+        }
       >
         <div class="flex min-h-screen bg-[#f8fafc]">
           <Sidebar activeTab={activeTab()} onTabChange={setActiveTab} />
@@ -61,6 +80,9 @@ const App: Component = () => {
                 <Match when={activeTab() === 'PEOPLE'}>
                   <PeoplePage />
                 </Match>
+                <Match when={activeTab() === 'SYSTEM'}>
+                  <UserManagementPage />
+                </Match>
                 {/* Fallback for other tabs not yet implemented as full pages */}
                 <Match when={true}>
                   <div class="flex flex-col items-center justify-center h-[calc(100vh-64px)] text-white/50">
@@ -76,7 +98,7 @@ const App: Component = () => {
           </main>
         </div>
       </Show>
-    </Show>
+    </>
   );
 };
 

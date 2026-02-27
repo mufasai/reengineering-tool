@@ -95,11 +95,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 <div class="px-6 mb-6">
                     <div class="flex items-center gap-3 p-3 rounded-lg bg-navy-800 border border-navy-700">
                         <div class="w-10 h-10 rounded-full bg-navy-700 text-white flex items-center justify-center text-xs font-bold ring-2 ring-navy-700">
-                            {user()?.name.charAt(0) || 'U'}
+                            {user()?.name?.charAt(0) || 'U'}
                         </div>
                         <div class="overflow-hidden">
                             <p class="text-sm font-medium truncate text-white">{user()?.name || 'User'}</p>
-                            <p class="text-[10px] text-slate-400 uppercase tracking-wide truncate">{user()?.role.replace('_', ' ') || 'Role'}</p>
+                            <p class="text-[10px] text-slate-400 uppercase tracking-wide truncate">{user()?.role?.replace('_', ' ') || 'Role'}</p>
                         </div>
                     </div>
                     {/* Dev Helper: Role Switcher */}
@@ -202,13 +202,14 @@ const Sidebar: Component<SidebarProps> = (props) => {
                     <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">System</p>
                     <div class="px-2 space-y-1 pb-10">
                         <button
+                            onClick={() => props.onTabChange('SYSTEM')}
                             class={`w-full flex items-center gap-3 px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === 'SYSTEM'
                                 ? 'bg-navy-800 text-blue-400 font-semibold border-l-2 border-blue-500'
                                 : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'
                                 }`}
                         >
                             <SettingsIcon class={`w-4 h-4 transition-colors ${props.activeTab === 'SYSTEM' ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
-                            <span>Options</span>
+                            <span>User Management</span>
                         </button>
                     </div>
                 </Show>

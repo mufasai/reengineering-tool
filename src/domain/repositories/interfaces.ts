@@ -3,7 +3,7 @@ import type { Team, Personnel } from "../entities/team.entity";
 import type { Termin, PaymentStatus } from "../entities/payment.entity";
 import type { MaterialTransaction, Material, CreateMaterialRequest } from "../entities/material.entity";
 
-import type { LoginRequest, LoginResponse } from "../entities/auth.entity";
+import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from "../entities/auth.entity";
 
 import type { Project, CreateProjectRequest, UpdateProjectRequest } from "../entities/project.entity";
 
@@ -14,6 +14,8 @@ import type { ProjectFile } from "../entities/project-file.entity";
 import type { SiteFile } from "../entities/site-file.entity";
 
 import type { CreateTerminRequest, TerminSubmission, ReviewTerminRequest, ApproveTerminRequest } from "../entities/termin-submission.entity";
+
+import type { User, UpdateUserRoleRequest } from "../entities/user.entity";
 
 export interface ProjectRepository {
     findAll(): Promise<Project[]>;
@@ -38,6 +40,7 @@ export interface PeopleRepository {
 
 export interface AuthRepository {
     login(credentials: LoginRequest): Promise<LoginResponse>;
+    register(data: RegisterRequest): Promise<RegisterResponse>;
     logout(): void;
     getToken(): string | null;
     saveToken(token: string): void;
@@ -76,4 +79,10 @@ export interface TerminRepository {
     findBySiteAndNumber(siteId: string, terminNumber: number): Promise<TerminSubmission | null>;
     review(terminId: string, review: ReviewTerminRequest): Promise<TerminSubmission>;
     approve(terminId: string, approval: ApproveTerminRequest): Promise<TerminSubmission>;
+}
+
+export interface UserRepository {
+    findAll(): Promise<User[]>;
+    updateRole(userId: string, role: UpdateUserRoleRequest): Promise<User>;
+    delete(userId: string): Promise<void>;
 }

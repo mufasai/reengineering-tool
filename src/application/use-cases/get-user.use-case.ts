@@ -11,7 +11,11 @@ export class GetUserInteractor implements GetUserUseCase {
             id: userId,
             name: "Tracking Tool User",
             email: "user@example.com",
-            role: "tracking-tool"
+            role: "tracking-tool",
+            email_verified_at: null,
+            remember_token: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         };
     }
 }
