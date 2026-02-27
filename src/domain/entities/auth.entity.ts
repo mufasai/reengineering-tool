@@ -21,7 +21,7 @@ export interface RegisterRequest {
     name: string;
     email: string;
     password: string;
-    role?: string; // Optional, will be set by admin later
+    role: string; // Required field for role selection
 }
 
 export interface RegisterResponse {

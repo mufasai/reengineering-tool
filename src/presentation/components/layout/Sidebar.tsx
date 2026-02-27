@@ -102,25 +102,14 @@ const Sidebar: Component<SidebarProps> = (props) => {
                             <p class="text-[10px] text-slate-400 uppercase tracking-wide truncate">{user()?.role?.replace('_', ' ') || 'Role'}</p>
                         </div>
                     </div>
-                    {/* Dev Helper: Role Switcher */}
-                    <div class="mt-4 pt-4 border-t border-navy-700 opacity-70 hover:opacity-100 transition-opacity">
-                        <label class="text-[10px] uppercase text-amber-500/70 font-bold tracking-wider mb-1 flex items-center gap-1">
-                            <SettingsIcon class="w-3 h-3" /> Switch Role (Dev)
+                    {/* Current Role Display */}
+                    <div class="mt-4 pt-4 border-t border-navy-700">
+                        <label class="text-[10px] uppercase text-slate-500 font-bold tracking-wider mb-1 flex items-center gap-1">
+                            <SettingsIcon class="w-3 h-3" /> Current Role
                         </label>
-                        <select
-                            class="w-full bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-500/90 rounded px-2 py-1 outline-none focus:border-amber-500/50 appearance-none"
-                            value={user()?.role || ''}
-                            onChange={(e) => {
-                                const newRole = e.currentTarget.value as any;
-                                authStore.setAuth({ ...user()!, role: newRole }, true);
-                            }}
-                        >
-                            <For each={['backoffice_admin', 'management', 'team_leader', 'finance', 'engineer', 'admin']}>
-                                {(role) => (
-                                    <option value={role} class="bg-navy-800 text-slate-300 capitalize">{role.replace('_', ' ')}</option>
-                                )}
-                            </For>
-                        </select>
+                        <div class="w-full bg-slate-800/50 border border-slate-700/50 text-[11px] text-slate-300 rounded px-3 py-2 capitalize">
+                            {user()?.role?.replace(/_/g, ' ') || 'No Role'}
+                        </div>
                     </div>
                 </div>
 

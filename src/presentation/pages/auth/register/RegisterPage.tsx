@@ -13,6 +13,7 @@ const RegisterPage: Component<RegisterPageProps> = (props) => {
     const [email, setEmail] = createSignal('');
     const [password, setPassword] = createSignal('');
     const [confirmPassword, setConfirmPassword] = createSignal('');
+    const [role, setRole] = createSignal('');
     const [loading, setLoading] = createSignal(false);
     const [error, setError] = createSignal<string | null>(null);
     const [success, setSuccess] = createSignal(false);
@@ -38,12 +39,18 @@ const RegisterPage: Component<RegisterPageProps> = (props) => {
             return;
         }
 
+        if (!role()) {
+            setError('Silakan pilih role');
+            setLoading(false);
+            return;
+        }
+
         try {
             const response = await registerUseCase.execute({
                 name: name(),
                 email: email(),
-                password: password()
-                // role not included - admin will set it later
+                password: password(),
+                role: role()
             });
 
             if (response.success) {
@@ -167,6 +174,27 @@ const RegisterPage: Component<RegisterPageProps> = (props) => {
                                 required
                                 disabled={loading() || success()}
                             />
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="role" class="text-sm font-medium text-gray-300 ml-1">Role</label>
+                            <select
+                                id="role"
+                                value={role()}
+                                onInput={(e) => setRole(e.currentTarget.value)}
+                                class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                                required
+                                disabled={loading() || success()}
+                            >
+                                <option value="" disabled selected>Pilih Role</option>
+                                <option value="admin">Admin</option>
+                                <option value="management">Management</option>
+                                <option value="backoffice admin">Backoffice Admin</option>
+                                <option value="finance">Finance</option>
+                                <option value="team leader">Team Leader</option>
+                                <option value="field head">Field Head</option>
+                                <option value="tracking tool">Tracking Tool</option>
+                            </select>
                         </div>
 
                         <div class="space-y-2">
