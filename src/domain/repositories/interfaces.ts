@@ -13,7 +13,7 @@ import type { ProjectFile } from "../entities/project-file.entity";
 
 import type { SiteFile } from "../entities/site-file.entity";
 
-import type { CreateTerminRequest, TerminSubmission, ReviewTerminRequest, ApproveTerminRequest } from "../entities/termin-submission.entity";
+import type { CreateTerminRequest, TerminSubmission, ReviewTerminRequest, ApproveTerminRequest, PayTerminRequest } from "../entities/termin-submission.entity";
 
 import type { User, UpdateUserRoleRequest } from "../entities/user.entity";
 
@@ -77,8 +77,10 @@ export interface TerminRepository {
     create(termin: CreateTerminRequest): Promise<TerminSubmission>;
     findById(terminId: string): Promise<TerminSubmission | null>;
     findBySiteAndNumber(siteId: string, terminNumber: number): Promise<TerminSubmission | null>;
+    findAll(): Promise<TerminSubmission[]>;
     review(terminId: string, review: ReviewTerminRequest): Promise<TerminSubmission>;
     approve(terminId: string, approval: ApproveTerminRequest): Promise<TerminSubmission>;
+    pay(terminId: string, payment: PayTerminRequest): Promise<TerminSubmission>;
 }
 
 export interface UserRepository {

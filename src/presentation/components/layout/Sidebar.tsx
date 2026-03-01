@@ -31,6 +31,10 @@ const FileTextIcon = (props: { class?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="16" x2="8" y1="13" y2="13" /><line x1="16" x2="8" y1="17" y2="17" /><line x1="10" x2="8" y1="9" y2="9" /></svg>
 );
 
+const ReceiptIcon = (props: { class?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z" /><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" /><path d="M12 17V7" /></svg>
+);
+
 interface SidebarProps {
     activeTab: string;
     onTabChange: (tab: any) => void;
@@ -53,6 +57,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
         if (['backoffice_admin', 'finance', 'management', 'admin'].includes(role)) {
             items.push({ icon: FolderIcon, label: 'All Projects', id: 'PROJECTS' });
         }
+
+        // Add Termin menu for Finance and Director
+        if (['finance', 'management', 'direktur'].includes(role)) {
+            items.push({ icon: ReceiptIcon, label: 'Termin', id: 'TERMIN' });
+        }
+
         return items;
     };
 

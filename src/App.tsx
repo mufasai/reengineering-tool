@@ -7,13 +7,14 @@ import WorkOrdersPage from './presentation/pages/dashboard/wo/WorkOrdersPage';
 import ProjectListPage from './presentation/pages/dashboard/projects/ProjectListPage';
 import PeoplePage from './presentation/pages/dashboard/people/PeoplePage';
 import UserManagementPage from './presentation/pages/dashboard/system/UserManagementPage';
+import TerminListPage from './presentation/pages/dashboard/termin/TerminListPage';
 import Sidebar from './presentation/components/layout/Sidebar';
 import Header from './presentation/components/layout/Header';
 import { authStore } from './presentation/store/auth.store';
 import './index.css';
 
 const App: Component = () => {
-  const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'PEOPLE' | 'TEAMS' | 'SYSTEM' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN'>('DASHBOARD');
+  const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'PEOPLE' | 'TEAMS' | 'SYSTEM' | 'TERMIN' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN'>('DASHBOARD');
   const [authView, setAuthView] = createSignal<'login' | 'register'>('login');
   const [isLoggedIn, setIsLoggedIn] = createSignal(false);
 
@@ -82,6 +83,9 @@ const App: Component = () => {
                 </Match>
                 <Match when={activeTab() === 'SYSTEM'}>
                   <UserManagementPage />
+                </Match>
+                <Match when={activeTab() === 'TERMIN'}>
+                  <TerminListPage />
                 </Match>
                 {/* Fallback for other tabs not yet implemented as full pages */}
                 <Match when={true}>
