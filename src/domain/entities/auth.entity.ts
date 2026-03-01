@@ -9,11 +9,30 @@ export interface LoginResponse {
     success: boolean;
     token: string;
     user: {
+        id?: string;
         email: string;
-        nama: string;
+        name: string; // Changed from nama to name
         role: string;
     };
     message: string;
+}
+
+export interface RegisterRequest {
+    name: string;
+    email: string;
+    password: string;
+    role: string; // Required field for role selection
+}
+
+export interface RegisterResponse {
+    success: boolean;
+    message: string;
+    data?: {
+        id: string;
+        name: string;
+        email: string;
+        role: string;
+    };
 }
 
 export interface AuthState {

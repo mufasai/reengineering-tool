@@ -1,12 +1,16 @@
 import { apiClient } from '../api/api-client';
 import type { AuthRepository } from '../../domain/repositories/interfaces';
-import type { LoginRequest, LoginResponse } from '../../domain/entities/auth.entity';
+import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from '../../domain/entities/auth.entity';
 
 const TOKEN_KEY = 'auth_token';
 
 export class AuthRepositoryImpl implements AuthRepository {
     async login(credentials: LoginRequest): Promise<LoginResponse> {
         return apiClient.post<LoginResponse>('/api/auth/login', credentials);
+    }
+
+    async register(data: RegisterRequest): Promise<RegisterResponse> {
+        return apiClient.post<RegisterResponse>('/api/auth/register', data);
     }
 
     logout(): void {

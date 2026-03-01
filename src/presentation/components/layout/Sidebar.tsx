@@ -31,6 +31,10 @@ const FileTextIcon = (props: { class?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="16" x2="8" y1="13" y2="13" /><line x1="16" x2="8" y1="17" y2="17" /><line x1="10" x2="8" y1="9" y2="9" /></svg>
 );
 
+const ReceiptIcon = (props: { class?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z" /><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" /><path d="M12 17V7" /></svg>
+);
+
 interface SidebarProps {
     activeTab: string;
     onTabChange: (tab: any) => void;
@@ -53,6 +57,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
         if (['backoffice_admin', 'finance', 'management', 'admin'].includes(role)) {
             items.push({ icon: FolderIcon, label: 'All Projects', id: 'PROJECTS' });
         }
+
+        // Add Termin menu for Finance and Director
+        if (['finance', 'management', 'direktur'].includes(role)) {
+            items.push({ icon: ReceiptIcon, label: 'Termin', id: 'TERMIN' });
+        }
+
         return items;
     };
 
@@ -95,32 +105,21 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 <div class="px-6 mb-6">
                     <div class="flex items-center gap-3 p-3 rounded-lg bg-navy-800 border border-navy-700">
                         <div class="w-10 h-10 rounded-full bg-navy-700 text-white flex items-center justify-center text-xs font-bold ring-2 ring-navy-700">
-                            {user()?.name.charAt(0) || 'U'}
+                            {user()?.name?.charAt(0) || 'U'}
                         </div>
                         <div class="overflow-hidden">
                             <p class="text-sm font-medium truncate text-white">{user()?.name || 'User'}</p>
-                            <p class="text-[10px] text-slate-400 uppercase tracking-wide truncate">{user()?.role.replace('_', ' ') || 'Role'}</p>
+                            <p class="text-[10px] text-slate-400 uppercase tracking-wide truncate">{user()?.role?.replace('_', ' ') || 'Role'}</p>
                         </div>
                     </div>
-                    {/* Dev Helper: Role Switcher */}
-                    <div class="mt-4 pt-4 border-t border-navy-700 opacity-70 hover:opacity-100 transition-opacity">
-                        <label class="text-[10px] uppercase text-amber-500/70 font-bold tracking-wider mb-1 flex items-center gap-1">
-                            <SettingsIcon class="w-3 h-3" /> Switch Role (Dev)
+                    {/* Current Role Display */}
+                    <div class="mt-4 pt-4 border-t border-navy-700">
+                        <label class="text-[10px] uppercase text-slate-500 font-bold tracking-wider mb-1 flex items-center gap-1">
+                            <SettingsIcon class="w-3 h-3" /> Current Role
                         </label>
-                        <select
-                            class="w-full bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-500/90 rounded px-2 py-1 outline-none focus:border-amber-500/50 appearance-none"
-                            value={user()?.role || ''}
-                            onChange={(e) => {
-                                const newRole = e.currentTarget.value as any;
-                                authStore.setAuth({ ...user()!, role: newRole }, true);
-                            }}
-                        >
-                            <For each={['backoffice_admin', 'management', 'team_leader', 'finance', 'engineer', 'admin']}>
-                                {(role) => (
-                                    <option value={role} class="bg-navy-800 text-slate-300 capitalize">{role.replace('_', ' ')}</option>
-                                )}
-                            </For>
-                        </select>
+                        <div class="w-full bg-slate-800/50 border border-slate-700/50 text-[11px] text-slate-300 rounded px-3 py-2 capitalize">
+                            {user()?.role?.replace(/_/g, ' ') || 'No Role'}
+                        </div>
                     </div>
                 </div>
 
@@ -202,13 +201,14 @@ const Sidebar: Component<SidebarProps> = (props) => {
                     <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">System</p>
                     <div class="px-2 space-y-1 pb-10">
                         <button
+                            onClick={() => props.onTabChange('SYSTEM')}
                             class={`w-full flex items-center gap-3 px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === 'SYSTEM'
                                 ? 'bg-navy-800 text-blue-400 font-semibold border-l-2 border-blue-500'
                                 : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'
                                 }`}
                         >
                             <SettingsIcon class={`w-4 h-4 transition-colors ${props.activeTab === 'SYSTEM' ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
-                            <span>Options</span>
+                            <span>User Management</span>
                         </button>
                     </div>
                 </Show>

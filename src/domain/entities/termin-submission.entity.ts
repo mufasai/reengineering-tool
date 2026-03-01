@@ -1,7 +1,7 @@
 export interface TerminSubmission {
     id: string;
     project_id: string;
-    site_id: string;
+    site_id: string | { site_name: string }; // Can be string or object with site_name
     type_termin: string;
     tgl_terima: string;
     jumlah: number;
@@ -46,6 +46,14 @@ export interface ApproveTerminRequest {
     approver_name: string;
     catatan_approval: string;
     approve: boolean;
+}
+
+export interface PayTerminRequest {
+    approved_by: string;
+    jumlah_dibayar: number;
+    referensi_pembayaran: string;
+    catatan_pembayaran: string;
+    bukti_pembayaran: File;
 }
 
 export interface CreateTerminResponse {

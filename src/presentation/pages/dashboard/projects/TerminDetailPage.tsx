@@ -110,7 +110,6 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                 return {
                     title: 'Menunggu Review Final Hasil',
                     message: 'Termin ini memerlukan review dari lead hasil sebelum dilanjutkan ke direktur',
-                    showReviewButton: true,
                     showApproveButtons: false,
                     showPaymentButton: false,
                     alertColor: 'yellow'
@@ -123,7 +122,6 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                 return {
                     title: 'Menunggu Persetujuan Direktur',
                     message: `${reviewInfo}Termin ini sudah disetujui field head dan menunggu persetujuan direktur`,
-                    showReviewButton: false,
                     showApproveButtons: true,
                     showPaymentButton: false,
                     alertColor: 'yellow'
@@ -133,20 +131,12 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                 return {
                     title: 'Menunggu Pembayaran',
                     message: `Disetujui oleh: John Doe pada 20/02/2026 14:40\nTermin ini menunggu pembayaran oleh keuangan`,
-                    showReviewButton: false,
                     showApproveButtons: false,
                     showPaymentButton: true,
                     alertColor: 'cyan'
                 };
             default:
                 return null;
-        }
-    };
-
-    const handleReviewTermin = () => {
-        console.log('Navigate to review page');
-        if (props.onReview) {
-            props.onReview();
         }
     };
 
@@ -329,22 +319,6 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                                         <div class="flex-1">
                                             <h3 class={`text-sm font-semibold ${textColor} mb-1`}>{emoji} {alert.title}</h3>
                                             <p class={`text-sm ${descColor} mb-3 whitespace-pre-line`}>{alert.message}</p>
-
-                                            {alert.showReviewButton && (
-                                                <button
-                                                    onClick={handleReviewTermin}
-                                                    class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                                        <polyline points="14 2 14 8 20 8"></polyline>
-                                                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                                                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                                                        <polyline points="10 9 9 9 8 9"></polyline>
-                                                    </svg>
-                                                    Review Termin
-                                                </button>
-                                            )}
 
                                             {alert.showApproveButtons && (
                                                 <>

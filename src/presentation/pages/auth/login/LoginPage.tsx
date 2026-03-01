@@ -5,7 +5,7 @@ import { LoginInteractor } from '../../../../application/use-cases/login.use-cas
 import { authStore } from '../../../store/auth.store';
 
 interface LoginPageProps {
-    onLogin: () => void;
+    onRegister?: () => void;
 }
 
 const LoginPage: Component<LoginPageProps> = (props) => {
@@ -23,29 +23,38 @@ const LoginPage: Component<LoginPageProps> = (props) => {
         setError(null);
 
         try {
+            console.log('Attempting login with:', email());
             const response = await loginUseCase.execute({
                 email: email(),
-                password: password() as any, // Using the type defined in entity
+                password: password() as any,
             });
+
+            console.log('Login response:', response);
 
             if (response.success) {
                 const user = {
-                    id: response.user.email,
-                    name: response.user.nama,
+                    id: response.user.id || response.user.email,
+                    name: response.user.name,
                     email: response.user.email,
-                    role: response.user.role.toLowerCase() as any
+                    role: response.user.role.toLowerCase() as any,
+                    email_verified_at: null,
+                    remember_token: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                 };
 
-                // Securely store user info (optional, but avoids repeat calls)
+                console.log('Setting auth with user:', user);
                 localStorage.setItem('auth_user', JSON.stringify(user));
                 authStore.setAuth(user, true);
-                props.onLogin();
+                console.log('Auth store isAuthenticated:', authStore.isAuthenticated());
+                setLoading(false);
             } else {
                 setError(response.message || 'Login failed');
+                setLoading(false);
             }
         } catch (err: any) {
+            console.error('Login error:', err);
             setError(err.message || 'An unexpected error occurred');
-        } finally {
             setLoading(false);
         }
     };
@@ -147,7 +156,7 @@ const LoginPage: Component<LoginPageProps> = (props) => {
                     </form>
 
                     <div class="mt-8 text-center text-sm text-gray-500">
-                        <p>Don't have an account? <a href="#" class="text-blue-400 font-medium hover:underline">Contact Administrator</a></p>
+                        <p>Don't have an account? <button onClick={() => props.onRegister?.()} class="text-blue-400 font-medium hover:underline">Create Account</button></p>
                     </div>
                 </div>
             </div>

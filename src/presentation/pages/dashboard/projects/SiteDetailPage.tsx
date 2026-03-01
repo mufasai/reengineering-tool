@@ -34,6 +34,9 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     const [terminStatus, setTerminStatus] = createSignal<'pending_review' | 'director_approval' | 'approved'>('pending_review');
     const [currentTerminData, setCurrentTerminData] = createSignal<TerminSubmission | null>(null);
 
+    // Store all termin data for status display
+    const [allTerminData, setAllTerminData] = createSignal<Map<number, TerminSubmission>>(new Map());
+
     // Store termin IDs for each termin number (persisted in localStorage)
     const getStoredTerminId = (terminNumber: number): string | null => {
         const siteId = props.site.id.split(':')[1];
@@ -45,6 +48,35 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
         const siteId = props.site.id.split(':')[1];
         const key = `termin_${siteId}_${terminNumber}`;
         localStorage.setItem(key, terminId);
+    };
+
+    // Check if termin has been submitted
+    const isTerminSubmitted = (terminNumber: number): boolean => {
+        return getStoredTerminId(terminNumber) !== null;
+    };
+
+    // Get termin status text for display
+    const getTerminStatusText = (terminNumber: number): string => {
+        const terminData = allTerminData().get(terminNumber);
+        if (!terminData) return 'Sedang Dikerjakan';
+
+        const status = terminData.status;
+        switch (status) {
+            case 'pending_review':
+            case 'field_head_review':
+                return 'Sedang Direview Finance';
+            case 'reviewed':
+            case 'director_approval':
+                return 'Menunggu Persetujuan Direktur';
+            case 'approved':
+                return 'Menunggu Pembayaran';
+            case 'paid':
+                return 'Dibayarkan';
+            case 'rejected':
+                return 'Ditolak';
+            default:
+                return 'Sedang Direview';
+        }
     };
 
     // Mock data for termins with new percentage rules: 30% -> 50% -> 10% -> 10%
@@ -74,7 +106,30 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     onMount(() => {
         loadMaterials();
         loadSiteFiles();
+        loadAllTerminStatuses();
     });
+
+    // Load all termin statuses for display
+    const loadAllTerminStatuses = async () => {
+        const terminRepository = new TerminRepositoryImpl();
+        const terminDataMap = new Map<number, TerminSubmission>();
+
+        for (let i = 1; i <= 4; i++) {
+            const terminId = getStoredTerminId(i);
+            if (terminId) {
+                try {
+                    const terminData = await terminRepository.findById(terminId);
+                    if (terminData) {
+                        terminDataMap.set(i, terminData);
+                    }
+                } catch (error) {
+                    console.error(`Failed to load termin ${i}:`, error);
+                }
+            }
+        }
+
+        setAllTerminData(terminDataMap);
+    };
 
     const loadMaterials = async () => {
         try {
@@ -149,14 +204,8 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                 setCurrentTerminData(terminData);
                 setTerminStatus(terminData.status as any);
 
-                // Redirect based on status
-                if (terminData.status === 'pending_review' || terminData.status === 'field_head_review') {
-                    // Jika masih pending review, langsung ke halaman review
-                    setShowTerminReview(true);
-                } else {
-                    // Untuk status lainnya (reviewed, director_approval, approved, dll), tampilkan detail
-                    setShowTerminDetail(true);
-                }
+                // Always show detail page, never redirect to review
+                setShowTerminDetail(true);
                 return true;
             }
             return false;
@@ -393,6 +442,8 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                     setShowTerminDetail(false);
                                     setTerminStatus('pending_review'); // Reset status
                                     setCurrentTerminData(null);
+                                    // Reload all termin statuses
+                                    loadAllTerminStatuses();
                                 }}
                                 onReview={() => {
                                     setShowTerminDetail(false);
@@ -440,13 +491,13 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                         terminNumber={selectedTerminNumber()}
                         onBack={() => setShowTerminSubmission(false)}
                         onSubmitSuccess={async (terminData) => {
-                            console.log('Termin submitted, showing detail with pending_review status');
+                            console.log('Termin submitted, returning to site detail');
                             // Store termin ID for future reference
                             storeTerminId(selectedTerminNumber(), terminData.id);
                             setCurrentTerminData(terminData);
                             setTerminStatus(terminData.status as any);
                             setShowTerminSubmission(false);
-                            setShowTerminDetail(true);
+                            // Don't show detail or review, just go back to site detail
                         }}
                     />
                 </Show>
@@ -534,13 +585,13 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                             {termin.status === 'active' && (
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-semibold">
-                                                        Sedang Dikerjakan
+                                                        {getTerminStatusText(termin.id)}
                                                     </span>
                                                     <button
                                                         onClick={() => handleAjukanTermin(termin.id)}
                                                         class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all"
                                                     >
-                                                        Ajukan Termin {termin.id}
+                                                        {isTerminSubmitted(termin.id) ? 'View' : `Ajukan Termin ${termin.id}`}
                                                     </button>
                                                 </div>
                                             )}
