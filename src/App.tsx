@@ -35,11 +35,18 @@ const App: Component = () => {
     }
   });
 
-  // Sync with authStore
+  // Sync with authStore and reset tab when user changes
   createEffect(() => {
     const authenticated = authStore.isAuthenticated();
-    console.log('Auth state changed:', authenticated);
+    const currentUser = authStore.user();
+    console.log('Auth state changed:', authenticated, 'User:', currentUser?.email);
     setIsLoggedIn(authenticated);
+
+    // Reset to dashboard when user logs in or changes
+    if (authenticated && currentUser) {
+      console.log('Resetting to DASHBOARD for user:', currentUser.email);
+      setActiveTab('DASHBOARD');
+    }
   });
 
   return (

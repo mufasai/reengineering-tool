@@ -64,7 +64,8 @@ const TerminListPage: Component = () => {
         } else if (role === 'management' || role === 'direktur') {
             filtered = filtered.filter(t =>
                 t.status === 'reviewed' ||
-                t.status === 'director_approval'
+                t.status === 'director_approval' ||
+                t.status === 'paid' // Show paid termins for director
             );
         }
 
@@ -113,6 +114,12 @@ const TerminListPage: Component = () => {
             setShowPaymentPage(true);
             setShowReviewPage(false);
             setShowApprovalPage(false);
+        } else if (termin.status === 'paid') {
+            // For paid termins, show a simple detail view (read-only)
+            // We can reuse the approval page but it will be read-only
+            setShowApprovalPage(true);
+            setShowReviewPage(false);
+            setShowPaymentPage(false);
         }
 
         console.log('showReviewPage:', showReviewPage(), 'showApprovalPage:', showApprovalPage(), 'showPaymentPage:', showPaymentPage());
@@ -243,7 +250,8 @@ const TerminListPage: Component = () => {
                                                                 {termin.status === 'pending_review' || termin.status === 'field_head_review' ? 'Review' :
                                                                     termin.status === 'reviewed' || termin.status === 'director_approval' ? 'Setujui' :
                                                                         termin.status === 'approved' ? 'Bayar' :
-                                                                            'Lihat Detail'}
+                                                                            termin.status === 'paid' ? 'Lihat Detail' :
+                                                                                'Lihat Detail'}
                                                             </button>
                                                         </td>
                                                     </tr>

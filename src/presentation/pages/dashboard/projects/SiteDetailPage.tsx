@@ -79,13 +79,64 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
         }
     };
 
+    // Get termin card status (active, completed, pending)
+    const getTerminCardStatus = (terminNumber: number): 'active' | 'completed' | 'pending' => {
+        const terminData = allTerminData().get(terminNumber);
+
+        // If termin is paid, it's completed
+        if (terminData?.status === 'paid') {
+            return 'completed';
+        }
+
+        // If termin exists (submitted), it's active
+        if (terminData) {
+            return 'active';
+        }
+
+        // Check if previous termin is paid
+        if (terminNumber === 1) {
+            return 'active'; // Termin 1 is always active initially
+        }
+
+        const previousTerminData = allTerminData().get(terminNumber - 1);
+        if (previousTerminData?.status === 'paid') {
+            return 'active'; // Previous termin is paid, this one can be started
+        }
+
+        return 'pending'; // Previous termin not paid yet
+    };
+
+    // Get termin progress percentage
+    const getTerminProgress = (terminNumber: number): number => {
+        const terminData = allTerminData().get(terminNumber);
+        if (!terminData) return 0;
+
+        const status = terminData.status;
+        switch (status) {
+            case 'pending_review':
+            case 'field_head_review':
+                return 25; // Submitted, waiting for review
+            case 'reviewed':
+            case 'director_approval':
+                return 50; // Reviewed, waiting for director approval
+            case 'approved':
+                return 75; // Approved, waiting for payment
+            case 'paid':
+                return 100; // Paid, completed
+            default:
+                return 0;
+        }
+    };
+
     // Mock data for termins with new percentage rules: 30% -> 50% -> 10% -> 10%
-    const termins = [
-        { id: 1, name: 'Termin 1', status: 'active', progress: 0, description: 'Pembayaran termin pertama (30% dari 70% nilai site)', percentage: 30 },
-        { id: 2, name: 'Termin 2', status: 'pending', progress: 0, description: 'Pembayaran termin kedua (50% dari 70% nilai site)', percentage: 50 },
-        { id: 3, name: 'Termin 3', status: 'pending', progress: 0, description: 'Pembayaran termin ketiga (10% dari 70% nilai site)', percentage: 10 },
-        { id: 4, name: 'Termin 4', status: 'pending', progress: 0, description: 'Pembayaran termin keempat (10% dari 70% nilai site)', percentage: 10 },
-    ];
+    const getTermins = () => {
+        return [
+            { id: 1, name: 'Termin 1', status: getTerminCardStatus(1), progress: getTerminProgress(1), description: 'Pembayaran termin pertama (30% dari 70% nilai site)', percentage: 30 },
+            { id: 2, name: 'Termin 2', status: getTerminCardStatus(2), progress: getTerminProgress(2), description: 'Pembayaran termin kedua (50% dari 70% nilai site)', percentage: 50 },
+            { id: 3, name: 'Termin 3', status: getTerminCardStatus(3), progress: getTerminProgress(3), description: 'Pembayaran termin ketiga (10% dari 70% nilai site)', percentage: 10 },
+            { id: 4, name: 'Termin 4', status: getTerminCardStatus(4), progress: getTerminProgress(4), description: 'Pembayaran termin keempat (10% dari 70% nilai site)', percentage: 10 },
+        ];
+    };
 
     // Mock data for team
     const [teamMembers] = createSignal([
@@ -180,8 +231,8 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                 return false;
             }
 
-            // Check if previous termin is approved (completed payment)
-            return previousTerminData.status === 'completed' || previousTerminData.status === 'approved';
+            // Check if previous termin is paid
+            return previousTerminData.status === 'paid';
         } catch (error) {
             console.error('Failed to check previous termin:', error);
             return false;
@@ -218,11 +269,11 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     const handleAjukanTermin = async (terminNumber: number) => {
         setSelectedTerminNumber(terminNumber);
 
-        // Check if previous termin is approved (except for termin 1)
+        // Check if previous termin is paid (except for termin 1)
         const canSubmit = await isPreviousTerminApproved(terminNumber);
 
         if (!canSubmit) {
-            alert(`Termin ${terminNumber} hanya bisa diajukan setelah Termin ${terminNumber - 1} disetujui dan dibayar.`);
+            alert(`Termin ${terminNumber} hanya bisa diajukan setelah Termin ${terminNumber - 1} dibayarkan.`);
             return;
         }
 
@@ -497,7 +548,8 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                             setCurrentTerminData(terminData);
                             setTerminStatus(terminData.status as any);
                             setShowTerminSubmission(false);
-                            // Don't show detail or review, just go back to site detail
+                            // Reload all termin statuses to update the cards
+                            await loadAllTerminStatuses();
                         }}
                     />
                 </Show>
@@ -546,7 +598,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                     </div>
 
                     <div class="space-y-4">
-                        <For each={termins}>
+                        <For each={getTermins()}>
                             {(termin, index) => (
                                 <div class="relative flex gap-4">
                                     {/* Step Number - Outside card */}
@@ -556,25 +608,23 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                         </div>
 
                                         {/* Connector Line - Outside card */}
-                                        {index() < termins.length - 1 && (
+                                        {index() < getTermins().length - 1 && (
                                             <div class="absolute left-1/2 top-12 w-0.5 bg-slate-300 -translate-x-1/2" style={{ height: 'calc(100% + 1rem)' }} />
                                         )}
                                     </div>
 
                                     {/* Card Content */}
-                                    <div class={`flex-1 border-2 ${getStatusBorderColor(termin.status)} rounded-xl p-4 ${termin.status === 'active' ? 'bg-blue-50' : 'bg-white'}`}>
+                                    <div class={`flex-1 border-2 ${getStatusBorderColor(termin.status)} rounded-xl p-4 ${termin.status === 'active' || termin.status === 'completed' ? 'bg-blue-50' : 'bg-white'}`}>
                                         <div class="mb-2">
                                             <div class="flex items-center gap-2 mb-2">
                                                 <span class="font-bold text-slate-900">{termin.name}</span>
                                                 <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-semibold">
                                                     {termin.percentage}%
                                                 </span>
-                                                <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">
-                                                    Progress: {termin.progress}%
-                                                </span>
-                                                {termin.status === 'completed' && (
-                                                    <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold">
-                                                        Proses Selesai
+                                                {/* Only show progress badge for Termin 1 and not completed */}
+                                                {termin.id === 1 && termin.status !== 'completed' && (
+                                                    <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">
+                                                        Progress: {termin.progress}%
                                                     </span>
                                                 )}
                                             </div>
@@ -582,7 +632,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                             <p class="text-xs text-slate-500 mb-3">{termin.description}</p>
 
                                             {/* Status and Button - Below termin name */}
-                                            {termin.status === 'active' && (
+                                            {(termin.status === 'active' || termin.status === 'completed') && (
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-semibold">
                                                         {getTerminStatusText(termin.id)}

@@ -185,17 +185,35 @@ const TerminApprovalDetailPage: Component<TerminApprovalDetailPageProps> = (prop
                                     Catatan Persetujuan
                                 </label>
                                 <textarea
-                                    value={catatanApproval()}
+                                    value={props.termin.status === 'paid' ? (props.termin.catatan_approval || '-') : catatanApproval()}
                                     onInput={(e) => setCatatanApproval(e.currentTarget.value)}
                                     rows={6}
-                                    disabled={loading() || !isDirector()}
+                                    disabled={loading() || !isDirector() || props.termin.status === 'paid'}
                                     class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-slate-100"
-                                    placeholder={isDirector() ? "Catatan persetujuan dari direktur" : "Hanya Direktur yang dapat mengisi catatan persetujuan"}
+                                    placeholder={props.termin.status === 'paid' ? 'Termin sudah dibayar' : (isDirector() ? "Catatan persetujuan dari direktur" : "Hanya Direktur yang dapat mengisi catatan persetujuan")}
                                 />
                             </div>
 
-                            {/* Action Buttons - Only show for Director */}
-                            <Show when={isDirector()}>
+                            {/* Show paid status info */}
+                            <Show when={props.termin.status === 'paid'}>
+                                <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <p class="text-sm font-semibold text-green-700 mb-2">✓ Termin Sudah Dibayar</p>
+                                    <div class="text-xs text-green-600 space-y-1">
+                                        <Show when={props.termin.paid_by}>
+                                            <p>Dibayar oleh: {props.termin.paid_by}</p>
+                                        </Show>
+                                        <Show when={props.termin.jumlah_dibayar}>
+                                            <p>Jumlah: {formatCurrency(props.termin.jumlah_dibayar!)}</p>
+                                        </Show>
+                                        <Show when={props.termin.referensi_pembayaran}>
+                                            <p>Referensi: {props.termin.referensi_pembayaran}</p>
+                                        </Show>
+                                    </div>
+                                </div>
+                            </Show>
+
+                            {/* Action Buttons - Only show for Director and not paid */}
+                            <Show when={isDirector() && props.termin.status !== 'paid'}>
                                 <div class="flex gap-3 pt-4">
                                     <button
                                         onClick={handleApprove}
@@ -211,6 +229,14 @@ const TerminApprovalDetailPage: Component<TerminApprovalDetailPageProps> = (prop
                                     >
                                         {loading() ? 'Memproses...' : 'Tolak Termin'}
                                     </button>
+                                </div>
+                            </Show>
+
+                            <Show when={!isDirector() && props.termin.status !== 'paid'}>
+                                <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <p class="text-xs text-yellow-700">
+                                        <span class="font-semibold">Akses Terbatas:</span> Hanya Direktur yang dapat menyetujui atau menolak termin.
+                                    </p>
                                 </div>
                             </Show>
                         </div>
