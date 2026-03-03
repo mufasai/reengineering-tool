@@ -15,8 +15,11 @@ const TerminReviewDetailPage: Component<TerminReviewDetailPageProps> = (props) =
     const [loading, setLoading] = createSignal(false);
     const [error, setError] = createSignal('');
 
-    // Check if user is Finance
-    const isFinance = () => authStore.user()?.role === 'finance';
+    // Check if user is Head Office
+    const isHeadOffice = () => {
+        const role = authStore.user()?.role;
+        return role === 'head_office' || role === 'backoffice_admin';
+    };
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -133,10 +136,10 @@ const TerminReviewDetailPage: Component<TerminReviewDetailPageProps> = (props) =
                             </div>
                         </Show>
 
-                        <Show when={!isFinance()}>
+                        <Show when={!isHeadOffice()}>
                             <div class="mb-6 bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg text-sm">
                                 <p class="font-semibold">Akses Terbatas</p>
-                                <p>Hanya Finance yang dapat melakukan review termin.</p>
+                                <p>Hanya Head Office yang dapat melakukan review termin.</p>
                             </div>
                         </Show>
 
@@ -172,14 +175,14 @@ const TerminReviewDetailPage: Component<TerminReviewDetailPageProps> = (props) =
                                     value={catatanReview()}
                                     onInput={(e) => setCatatanReview(e.currentTarget.value)}
                                     rows={6}
-                                    disabled={loading() || !isFinance()}
+                                    disabled={loading() || !isHeadOffice()}
                                     class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-slate-100"
-                                    placeholder={isFinance() ? "review oleh head area" : "Hanya Finance yang dapat mengisi catatan review"}
+                                    placeholder={isHeadOffice() ? "review oleh head office" : "Hanya Head Office yang dapat mengisi catatan review"}
                                 />
                             </div>
 
-                            {/* Action Buttons - Only show for Finance */}
-                            <Show when={isFinance()}>
+                            {/* Action Buttons - Only show for Head Office */}
+                            <Show when={isHeadOffice()}>
                                 <div class="flex gap-3 pt-4">
                                     <button
                                         onClick={handleApprove}

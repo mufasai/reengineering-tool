@@ -64,7 +64,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
         switch (status) {
             case 'pending_review':
             case 'field_head_review':
-                return 'Sedang Direview Finance';
+                return 'Sedang Direview Head Office';
             case 'reviewed':
             case 'director_approval':
                 return 'Menunggu Persetujuan Direktur';

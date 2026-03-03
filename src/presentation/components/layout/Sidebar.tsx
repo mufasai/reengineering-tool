@@ -58,8 +58,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
             items.push({ icon: FolderIcon, label: 'All Projects', id: 'PROJECTS' });
         }
 
-        // Add Termin menu for Finance and Director
-        if (['finance', 'management', 'direktur'].includes(role)) {
+        // Add Termin menu for Finance, Head Office, and Director
+        if (['finance', 'head_office', 'backoffice_admin', 'management', 'direktur'].includes(role)) {
             items.push({ icon: ReceiptIcon, label: 'Termin', id: 'TERMIN' });
         }
 

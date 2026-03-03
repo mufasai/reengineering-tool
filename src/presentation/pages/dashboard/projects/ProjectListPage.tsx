@@ -122,13 +122,15 @@ const ProjectListPage: Component = () => {
             field: 'tgi_start',
             headerName: 'Start Date',
             width: 130,
-            cellClass: 'text-slate-500 text-xs'
+            cellClass: 'text-slate-500 text-xs',
+            hide: true
         },
         {
             field: 'tgi_end',
             headerName: 'End Date',
             width: 130,
-            cellClass: 'text-slate-500 text-xs'
+            cellClass: 'text-slate-500 text-xs',
+            hide: true
         },
         {
             field: 'status',
@@ -257,13 +259,13 @@ const ProjectListPage: Component = () => {
                         </div>
 
                         <div class="flex items-center gap-3 w-full lg:w-auto overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
-                            {/* Date Range Picker (Mock) */}
-                            <div class="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-500 text-[10px] tracking-widest uppercase whitespace-nowrap">
+                            {/* Date Range Picker (Mock) - HIDDEN */}
+                            {/* <div class="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-500 text-[10px] tracking-widest uppercase whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
                                 <span>Tgl Start</span>
                                 <span class="text-slate-300">—</span>
                                 <span>Tgl End</span>
-                            </div>
+                            </div> */}
 
                             {/* Export Buttons */}
                             <div class="flex items-center gap-2">
