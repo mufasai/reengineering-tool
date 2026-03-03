@@ -18,9 +18,15 @@ const TerminListPage: Component = () => {
     const [activeTab, setActiveTab] = createSignal<string>('pending');
 
     const user = authStore.user;
-    const isFinance = () => user()?.role === 'finance';
-    const isHeadOffice = () => user()?.role === 'head_office' || user()?.role === 'backoffice_admin';
-    const isDirector = () => user()?.role === 'management' || user()?.role === 'direktur';
+    const isFinance = () => user()?.role?.toLowerCase() === 'finance';
+    const isHeadOffice = () => {
+        const role = user()?.role?.toLowerCase().replace(/\s+/g, '_') || '';
+        return role === 'head_office' || role === 'backoffice_admin';
+    };
+    const isDirector = () => {
+        const role = user()?.role?.toLowerCase() || '';
+        return role === 'management' || role === 'direktur';
+    };
 
     const terminRepository = new TerminRepositoryImpl();
     const getAllTerminsUseCase = new GetAllTerminsInteractor(terminRepository);

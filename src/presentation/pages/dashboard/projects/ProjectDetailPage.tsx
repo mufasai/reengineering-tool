@@ -5,6 +5,8 @@ import type { Project } from '../../../../domain/entities/project.entity';
 import type { Site } from '../../../../domain/entities/work-order.entity';
 import type { ProjectFile } from '../../../../domain/entities/project-file.entity';
 import CreateSiteModal from './components/CreateSiteModal';
+import UploadProjectFileModal from './components/UploadProjectFileModal';
+import FilePreviewModal from './components/FilePreviewModal';
 import SiteDetailPage from './SiteDetailPage';
 import { GetSitesByProjectInteractor } from '../../../../application/use-cases/get-sites-by-project.use-case';
 import { GetProjectFilesInteractor } from '../../../../application/use-cases/get-project-files.use-case';
@@ -31,6 +33,9 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
     const [searchTerm, setSearchTerm] = createSignal('');
     const [fileSearchTerm, setFileSearchTerm] = createSignal('');
     const [showCreateSiteModal, setShowCreateSiteModal] = createSignal(false);
+    const [showUploadFileModal, setShowUploadFileModal] = createSignal(false);
+    const [showFilePreviewModal, setShowFilePreviewModal] = createSignal(false);
+    const [selectedFile, setSelectedFile] = createSignal<ProjectFile | null>(null);
     const [sites, setSites] = createSignal<Site[]>([]);
     const [files, setFiles] = createSignal<ProjectFile[]>([]);
     const [isLoadingSites, setIsLoadingSites] = createSignal(false);
@@ -71,6 +76,29 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
     const handleSiteCreated = () => {
         setShowCreateSiteModal(false);
         loadSites();
+    };
+
+    const handleFileUploaded = () => {
+        setShowUploadFileModal(false);
+        loadFiles();
+    };
+
+    const handleFilePreview = (file: ProjectFile) => {
+        setSelectedFile(file);
+        setShowFilePreviewModal(true);
+    };
+
+    const handleFileDownload = (file: ProjectFile) => {
+        const fileId = file.id.includes(':') ? file.id.split(':').pop()! : file.id;
+        const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/project-files/${fileId}/download`;
+
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = file.original_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     // Data
@@ -275,18 +303,39 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
         },
         {
             headerName: 'Actions',
-            width: 100,
+            width: 120,
             sortable: false,
             filter: false,
-            cellRenderer: () => (
-                <div class="flex justify-end h-full items-center">
-                    <button class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                        </svg>
-                    </button>
-                </div>
-            )
+            cellRenderer: (params: any) => {
+                const container = document.createElement('div');
+                container.className = 'flex justify-end gap-2 h-full items-center';
+
+                // Preview button
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all';
+                previewBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                `;
+                previewBtn.onclick = () => handleFilePreview(params.data);
+
+                // Download button
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all';
+                downloadBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                `;
+                downloadBtn.onclick = () => handleFileDownload(params.data);
+
+                container.appendChild(previewBtn);
+                container.appendChild(downloadBtn);
+
+                return container;
+            }
         }
     ];
 
@@ -535,7 +584,12 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                     <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                         <div class="p-4 border-b border-slate-200 flex justify-between items-center">
                             <h3 class="text-sm font-bold text-slate-900">Project Files ({files().length})</h3>
-                            <button class="text-xs text-blue-600 hover:text-blue-700 font-medium">+ Add Files</button>
+                            <button
+                                onClick={() => setShowUploadFileModal(true)}
+                                class="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                                + Add Files
+                            </button>
                         </div>
 
                         {/* Search Bar */}
@@ -595,6 +649,25 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                         onCancel={() => setShowCreateSiteModal(false)}
                     />
                 )}
+
+                {/* Upload File Modal */}
+                <UploadProjectFileModal
+                    show={showUploadFileModal()}
+                    projectId={projectId()}
+                    onClose={() => setShowUploadFileModal(false)}
+                    onSuccess={handleFileUploaded}
+                />
+
+                {/* File Preview Modal */}
+                <FilePreviewModal
+                    show={showFilePreviewModal()}
+                    file={selectedFile()}
+                    onClose={() => {
+                        setShowFilePreviewModal(false);
+                        setSelectedFile(null);
+                    }}
+                    onDownload={handleFileDownload}
+                />
             </div>
         </Show>
     );

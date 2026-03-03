@@ -1,7 +1,7 @@
 import { apiClient } from "../api/api-client";
 import type { ProjectRepository } from "../../domain/repositories/interfaces";
 import type { Project, ApiResponse, CreateProjectRequest, UpdateProjectRequest } from "../../domain/entities/project.entity";
-import type { ProjectFile, ProjectFilesApiResponse } from "../../domain/entities/project-file.entity";
+import type { ProjectFile, ProjectFilesApiResponse, UploadProjectFileRequest, UploadProjectFileResponse } from "../../domain/entities/project-file.entity";
 
 export class ProjectRepositoryImpl implements ProjectRepository {
     async findAll(): Promise<Project[]> {
@@ -36,6 +36,22 @@ export class ProjectRepositoryImpl implements ProjectRepository {
         // Extract raw ID from SurrealDB format (e.g., "projects:abc123" → "abc123")
         const rawId = projectId.includes(':') ? projectId.split(':').pop()! : projectId;
         const response = await apiClient.get<ProjectFilesApiResponse>(`/api/projects/${rawId}/files`);
+        return response.data;
+    }
+
+    async uploadFile(projectId: string, request: UploadProjectFileRequest): Promise<ProjectFile> {
+        // Extract raw ID from SurrealDB format
+        const rawId = projectId.includes(':') ? projectId.split(':').pop()! : projectId;
+
+        // Create FormData
+        const formData = new FormData();
+        formData.append('file', request.file);
+        formData.append('title', request.title);
+
+        const response = await apiClient.postFormData<UploadProjectFileResponse>(
+            `/api/projects/${rawId}/upload`,
+            formData
+        );
         return response.data;
     }
 }

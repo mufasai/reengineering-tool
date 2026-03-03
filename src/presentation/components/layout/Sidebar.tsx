@@ -48,6 +48,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
         const items = [{ icon: DashboardIcon, label: 'Dashboard', id: 'DASHBOARD' }];
         const role = user()?.role || '';
 
+        // Debug: log the role
+        console.log('Current user role:', role);
+
         if (['backoffice_admin', 'management', 'team_leader', 'admin'].includes(role)) {
             items.push({ icon: WorkOrderIcon, label: 'Work Orders', id: 'WO' });
         }
@@ -59,7 +62,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
         }
 
         // Add Termin menu for Finance, Head Office, and Director
-        if (['finance', 'head_office', 'backoffice_admin', 'management', 'direktur'].includes(role)) {
+        // Check with case-insensitive comparison and handle spaces/underscores
+        const roleLower = role.toLowerCase().replace(/\s+/g, '_');
+        if (['finance', 'head_office', 'backoffice_admin', 'management', 'direktur'].includes(roleLower)) {
             items.push({ icon: ReceiptIcon, label: 'Termin', id: 'TERMIN' });
         }
 

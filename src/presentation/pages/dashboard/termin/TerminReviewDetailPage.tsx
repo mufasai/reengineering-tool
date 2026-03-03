@@ -17,7 +17,7 @@ const TerminReviewDetailPage: Component<TerminReviewDetailPageProps> = (props) =
 
     // Check if user is Head Office
     const isHeadOffice = () => {
-        const role = authStore.user()?.role;
+        const role = authStore.user()?.role?.toLowerCase().replace(/\s+/g, '_') || '';
         return role === 'head_office' || role === 'backoffice_admin';
     };
 

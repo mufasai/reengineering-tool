@@ -9,7 +9,7 @@ import type { Project, CreateProjectRequest, UpdateProjectRequest } from "../ent
 
 import type { Person, CreatePersonRequest } from "../entities/person.entity";
 
-import type { ProjectFile } from "../entities/project-file.entity";
+import type { ProjectFile, UploadProjectFileRequest } from "../entities/project-file.entity";
 
 import type { SiteFile } from "../entities/site-file.entity";
 
@@ -24,6 +24,7 @@ export interface ProjectRepository {
     delete(id: string): Promise<void>;
     update(id: string, project: UpdateProjectRequest): Promise<Project>;
     getFiles(projectId: string): Promise<ProjectFile[]>;
+    uploadFile(projectId: string, request: UploadProjectFileRequest): Promise<ProjectFile>;
 }
 
 export interface SiteRepository {
