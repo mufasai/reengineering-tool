@@ -19,6 +19,16 @@ const ProjectListPage: Component = () => {
     const [deleteTarget, setDeleteTarget] = createSignal<{ id: string; name: string } | null>(null);
     const [deleting, setDeleting] = createSignal(false);
 
+    // Permission helpers
+    const canEdit = () => {
+        const role = user()?.role || '';
+        // Backend sends: "backoffice admin", "management", "admin" (lowercase with spaces)
+        // Only admin, backoffice admin, and management can edit projects
+        // Team leader can only view projects and work within sites
+        return ['admin', 'backoffice admin', 'management'].includes(role);
+    };
+    const isReadOnly = () => !canEdit();
+
     // Fetch projects from API
     const [projectsResource, { refetch }] = createResource(async () => {
         try {
@@ -152,19 +162,35 @@ const ProjectListPage: Component = () => {
             filter: false,
             cellRenderer: (params: any) => {
                 const project = params.data as Project;
-                return (
-                    <div class="flex items-center gap-1.5 h-full">
-                        <button onClick={() => setDetailProject(project)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100" title="View">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                        </button>
-                        <button onClick={() => handleEditProject(project)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-all border border-slate-100" title="Edit">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
-                        </button>
-                        <button onClick={() => handleDeleteProject(project.id, project.name)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all border border-slate-100" title="Delete">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                        </button>
-                    </div>
-                );
+                const container = document.createElement('div');
+                container.className = 'flex items-center gap-1.5 h-full';
+
+                // View button - always visible
+                const viewBtn = document.createElement('button');
+                viewBtn.className = 'w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100';
+                viewBtn.title = 'View';
+                viewBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>';
+                viewBtn.onclick = () => setDetailProject(project);
+                container.appendChild(viewBtn);
+
+                // Edit and Delete buttons - only for users who can edit
+                if (canEdit()) {
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-all border border-slate-100';
+                    editBtn.title = 'Edit';
+                    editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>';
+                    editBtn.onclick = () => handleEditProject(project);
+                    container.appendChild(editBtn);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all border border-slate-100';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>';
+                    deleteBtn.onclick = () => handleDeleteProject(project.id, project.name);
+                    container.appendChild(deleteBtn);
+                }
+
+                return container;
             }
         }
     ];
@@ -225,13 +251,15 @@ const ProjectListPage: Component = () => {
                         <h1 class="text-4xl font-bold tracking-tight text-slate-900 font-display">All Projects</h1>
                         <p class="text-slate-500 mt-2 font-normal">Manage and monitor all reengineering projects.</p>
                     </div>
-                    <button
-                        onClick={() => { setEditingProject(null); setShowModal(true); }}
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95 translate-y-0 hover:translate-y-[-2px]"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14" /></svg>
-                        New Project
-                    </button>
+                    <Show when={canEdit()}>
+                        <button
+                            onClick={() => { setEditingProject(null); setShowModal(true); }}
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95 translate-y-0 hover:translate-y-[-2px]"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14" /></svg>
+                            New Project
+                        </button>
+                    </Show>
                 </header>
 
                 <div class="bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-sm p-8 space-y-6">

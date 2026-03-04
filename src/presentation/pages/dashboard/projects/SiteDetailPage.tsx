@@ -22,9 +22,22 @@ import CreateMaterialModal from './components/CreateMaterialModal';
 interface SiteDetailPageProps {
     site: Site;
     onBack: () => void;
+    canEdit?: boolean | 'team_leader';
 }
 
 const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
+    const canEdit = () => {
+        // Full edit permission (admin, management, backoffice_admin)
+        return props.canEdit === true;
+    };
+    const isTeamLeader = () => {
+        // Team leader has limited edit permissions
+        return props.canEdit === 'team_leader';
+    };
+    const isReadOnly = () => {
+        // Read-only if canEdit is false (finance, head_office, direktur)
+        return props.canEdit === false;
+    };
 
     const [showTerminSubmission, setShowTerminSubmission] = createSignal(false);
     const [showTerminDetail, setShowTerminDetail] = createSignal(false);
@@ -573,10 +586,16 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-semibold rounded-xl transition-all">
+                        <button
+                            disabled={isReadOnly() || isTeamLeader()}
+                            class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-semibold rounded-xl transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        >
                             Edit
                         </button>
-                        <button class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all">
+                        <button
+                            disabled={isReadOnly() || isTeamLeader()}
+                            class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all disabled:bg-slate-400 disabled:cursor-not-allowed"
+                        >
                             Manage
                         </button>
                     </div>
@@ -637,12 +656,28 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                                     <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-semibold">
                                                         {getTerminStatusText(termin.id)}
                                                     </span>
-                                                    <button
-                                                        onClick={() => handleAjukanTermin(termin.id)}
-                                                        class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all"
-                                                    >
-                                                        {isTerminSubmitted(termin.id) ? 'View' : `Ajukan Termin ${termin.id}`}
-                                                    </button>
+                                                    {/* Button logic:
+                                                        - If termin submitted: ALL users see "View" button
+                                                        - If termin NOT submitted AND user can edit (admin/management/team_leader): show "Ajukan Termin" button
+                                                        - If termin NOT submitted AND user is read-only: show nothing
+                                                    */}
+                                                    {isTerminSubmitted(termin.id) ? (
+                                                        // Termin already submitted - everyone sees "View"
+                                                        <button
+                                                            onClick={() => handleAjukanTermin(termin.id)}
+                                                            class="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all"
+                                                        >
+                                                            View
+                                                        </button>
+                                                    ) : (canEdit() || isTeamLeader()) ? (
+                                                        // Termin not submitted yet - only users who can edit see "Ajukan Termin"
+                                                        <button
+                                                            onClick={() => handleAjukanTermin(termin.id)}
+                                                            class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all"
+                                                        >
+                                                            Ajukan Termin {termin.id}
+                                                        </button>
+                                                    ) : null}
                                                 </div>
                                             )}
                                         </div>
@@ -742,7 +777,10 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center">
                         <h3 class="text-lg font-bold text-slate-900">Tim (Struktur)</h3>
-                        <button class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all">
+                        <button
+                            disabled={isReadOnly()}
+                            class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        >
                             + Add Team
                         </button>
                     </div>
@@ -763,7 +801,8 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                         <h3 class="text-lg font-bold text-slate-900">Materials</h3>
                         <button
                             onClick={() => setShowCreateMaterialModal(true)}
-                            class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all"
+                            disabled={isReadOnly()}
+                            class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
                         >
                             + Add Material
                         </button>
@@ -787,7 +826,10 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center">
                         <h3 class="text-lg font-bold text-slate-900">Site Files</h3>
-                        <button class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all">
+                        <button
+                            disabled={isReadOnly()}
+                            class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        >
                             + Upload File
                         </button>
                     </div>

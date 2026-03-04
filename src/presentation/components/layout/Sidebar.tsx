@@ -48,23 +48,26 @@ const Sidebar: Component<SidebarProps> = (props) => {
         const items = [{ icon: DashboardIcon, label: 'Dashboard', id: 'DASHBOARD' }];
         const role = user()?.role || '';
 
-        // Debug: log the role
+        // Backend sends roles in lowercase with spaces: "backoffice admin", "team leader", "head office"
         console.log('Current user role:', role);
 
-        if (['backoffice_admin', 'management', 'team_leader', 'admin'].includes(role)) {
+        if (['backoffice admin', 'management', 'team leader', 'admin'].includes(role)) {
             items.push({ icon: WorkOrderIcon, label: 'Work Orders', id: 'WO' });
         }
 
         items.push({ icon: FileTextIcon, label: 'SPK', id: 'SPK' });
 
-        if (['backoffice_admin', 'finance', 'management', 'admin'].includes(role)) {
+        // All Projects menu - includes team leader, head office, direktur, finance
+        const projectAllowedRoles = ['backoffice admin', 'finance', 'management', 'admin', 'team leader', 'head office', 'direktur'];
+
+        if (projectAllowedRoles.includes(role)) {
             items.push({ icon: FolderIcon, label: 'All Projects', id: 'PROJECTS' });
         }
 
-        // Add Termin menu for Finance, Head Office, and Director
-        // Check with case-insensitive comparison and handle spaces/underscores
-        const roleLower = role.toLowerCase().replace(/\s+/g, '_');
-        if (['finance', 'head_office', 'backoffice_admin', 'management', 'direktur'].includes(roleLower)) {
+        // Add Termin menu for Finance, Head Office, Director, and Team Leader
+        const terminAllowedRoles = ['finance', 'head office', 'backoffice admin', 'management', 'direktur', 'team leader'];
+
+        if (terminAllowedRoles.includes(role)) {
             items.push({ icon: ReceiptIcon, label: 'Termin', id: 'TERMIN' });
         }
 
@@ -77,7 +80,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
         { icon: UsersIcon, label: 'Teams', id: 'TEAMS' },
     ];
 
-    const canManageData = () => ['backoffice_admin', 'management', 'admin'].includes(user()?.role || '');
+    const canManageData = () => {
+        const role = user()?.role || '';
+        // Backend sends: "backoffice admin", "management", "admin" (lowercase with spaces)
+        return ['backoffice admin', 'management', 'admin'].includes(role);
+    };
 
     // 3. PROJECT TYPES
     const projectTypes = [
@@ -152,7 +159,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 <div class="px-2 space-y-1">
                     <For each={projectTypes}>
                         {(type) => {
-                            const isRestricted = ['engineer', 'team_leader'].includes(user()?.role || '');
+                            const role = user()?.role || '';
+                            // Backend sends: "team leader" (lowercase with space)
+                            const isRestricted = ['engineer', 'team leader'].includes(role);
                             if (isRestricted && type.count === 0) return null;
 
                             return (
@@ -202,7 +211,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 </Show>
 
                 {/* 4. SYSTEM */}
-                <Show when={user()?.role === 'management' || user()?.role === 'admin'}>
+                <Show when={() => {
+                    const role = user()?.role || '';
+                    // Backend sends: "management", "admin" (lowercase)
+                    return role === 'management' || role === 'admin';
+                }}>
                     <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">System</p>
                     <div class="px-2 space-y-1 pb-10">
                         <button

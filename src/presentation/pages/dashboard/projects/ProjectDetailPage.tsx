@@ -12,6 +12,7 @@ import { GetSitesByProjectInteractor } from '../../../../application/use-cases/g
 import { GetProjectFilesInteractor } from '../../../../application/use-cases/get-project-files.use-case';
 import { siteRepository } from '../../../../infrastructure/repositories/site.repository.impl';
 import { projectRepository } from '../../../../infrastructure/repositories/project.repository.impl';
+import { authStore } from '../../../store/auth.store';
 
 const getSitesByProjectUseCase = new GetSitesByProjectInteractor(siteRepository);
 const getProjectFilesUseCase = new GetProjectFilesInteractor(projectRepository);
@@ -28,6 +29,21 @@ interface ProjectDetailPageProps {
 
 const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
     const projectId = () => props.project.id;
+
+    // Permission helpers
+    const user = () => authStore.user();
+    const canEdit = () => {
+        const role = user()?.role || '';
+        // Backend sends: "backoffice admin", "management", "admin" (lowercase with spaces)
+        // Only admin, backoffice admin, and management can fully edit projects
+        return ['admin', 'backoffice admin', 'management'].includes(role);
+    };
+    const isTeamLeader = () => {
+        const role = user()?.role || '';
+        // Backend sends: "team leader" (lowercase with space)
+        return role === 'team leader';
+    };
+    const isReadOnly = () => !canEdit() && !isTeamLeader();
 
     // Local state
     const [searchTerm, setSearchTerm] = createSignal('');
@@ -218,32 +234,45 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
             sortable: false,
             filter: false,
             pinned: 'right',
-            cellRenderer: (params: any) => (
-                <div class="flex justify-end gap-2 h-full items-center">
-                    <button
-                        onClick={() => {
-                            console.log('View clicked, data:', params.data);
-                            setSelectedSite(params.data);
-                        }}
-                        class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                        </svg>
-                    </button>
-                    <button class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all">
+            cellRenderer: (params: any) => {
+                const container = document.createElement('div');
+                container.className = 'flex justify-end gap-2 h-full items-center';
+
+                // View button - always visible
+                const viewBtn = document.createElement('button');
+                viewBtn.className = 'p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all';
+                viewBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                `;
+                viewBtn.onclick = () => setSelectedSite(params.data);
+                container.appendChild(viewBtn);
+
+                // Edit and Delete buttons - only for users who can edit
+                if (canEdit()) {
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all';
+                    editBtn.innerHTML = `
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                         </svg>
-                    </button>
-                    <button class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                    `;
+                    container.appendChild(editBtn);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all';
+                    deleteBtn.innerHTML = `
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                         </svg>
-                    </button>
-                </div>
-            )
+                    `;
+                    container.appendChild(deleteBtn);
+                }
+
+                return container;
+            }
         }
     ]
 
@@ -357,6 +386,7 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                 <SiteDetailPage
                     site={selectedSite()!}
                     onBack={() => setSelectedSite(null)}
+                    canEdit={isTeamLeader() ? 'team_leader' : (canEdit() ? true : false)}
                 />
             }
         >
@@ -518,7 +548,8 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                             </h2>
                             <button
                                 onClick={() => setShowCreateSiteModal(true)}
-                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all"
+                                disabled={isReadOnly()}
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
                             >
                                 + Add Site
                             </button>
@@ -586,7 +617,8 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                             <h3 class="text-sm font-bold text-slate-900">Project Files ({files().length})</h3>
                             <button
                                 onClick={() => setShowUploadFileModal(true)}
-                                class="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                disabled={isReadOnly()}
+                                class="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:text-slate-400 disabled:cursor-not-allowed"
                             >
                                 + Add Files
                             </button>
