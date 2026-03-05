@@ -1,27 +1,39 @@
-export type TeamType = 'INEOM_REGISTERED' | 'NOT_INEOM_REGISTERED';
+export interface Team {
+    id: string;
+    nama: string;
+    active: boolean;
+    nik: string;
+    nama_karyawan: string;
+    tanggal_lahir: string;
+    tempat_lahir: string;
+    agama: string;
+    jenis_kelamin: string;
+    no_ktp: string;
+    no_hp: string;
+    alamat_email: string;
+    jabatan_kerja: string;
+    regional: string;
+    created_at: string;
+    updated_at: string;
+}
 
 export interface Personnel {
     id: string;
     name: string;
-    ktpNumber: string;
-    email: string;
-    phoneNumber: string;
     role: string;
-    vendorName?: string;
-    deviceId?: string;
-    imei1?: string;
-    imei2?: string;
-    verificationPhotos: {
-        ktp: string; // URL/Path
-        selfie: string;
-        nda: string;
-    };
 }
 
-export interface Team {
-    id: string;
-    name: string;
-    type: TeamType;
-    leaderId: string;
-    members: Personnel[];
+export interface UploadTeamsRequest {
+    file: File;
+}
+
+export interface UploadTeamsResponse {
+    success: boolean;
+    data: {
+        total_rows: number;
+        success_count: number;
+        failed_count: number;
+        errors: string[];
+    };
+    message: string;
 }

@@ -6,6 +6,7 @@ import RegisterPage from './presentation/pages/auth/register/RegisterPage';
 import WorkOrdersPage from './presentation/pages/dashboard/wo/WorkOrdersPage';
 import ProjectListPage from './presentation/pages/dashboard/projects/ProjectListPage';
 import PeoplePage from './presentation/pages/dashboard/people/PeoplePage';
+import TeamsPage from './presentation/pages/dashboard/teams/TeamsPage';
 import UserManagementPage from './presentation/pages/dashboard/system/UserManagementPage';
 import TerminListPage from './presentation/pages/dashboard/termin/TerminListPage';
 import Sidebar from './presentation/components/layout/Sidebar';
@@ -87,6 +88,9 @@ const App: Component = () => {
                 </Match>
                 <Match when={activeTab() === 'PEOPLE'}>
                   <PeoplePage />
+                </Match>
+                <Match when={activeTab() === 'TEAMS'}>
+                  <TeamsPage />
                 </Match>
                 <Match when={activeTab() === 'SYSTEM'}>
                   <UserManagementPage />

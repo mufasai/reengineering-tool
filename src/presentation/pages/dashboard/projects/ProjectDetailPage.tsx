@@ -122,9 +122,23 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
 
     // Stats calculations
     const totalBudget = createMemo(() => props.project.value || 0);
-    const usedAmount = createMemo(() => 150000000); // Mock
-    const remainingBudget = createMemo(() => totalBudget() - usedAmount());
-    const usedPercentage = createMemo(() => totalBudget() > 0 ? (usedAmount() / totalBudget()) * 100 : 0);
+    const usedAmount = createMemo(() => {
+        // Calculate actual used amount from sites
+        // For now, use mock data but ensure it doesn't exceed total budget
+        const mockUsed = 50000000; // Mock: 50 million (50% of typical 100M budget)
+        const used = Math.min(mockUsed, totalBudget());
+        console.log('Budget calculation:', { totalBudget: totalBudget(), mockUsed, used });
+        return used;
+    });
+    const remainingBudget = createMemo(() => Math.max(0, totalBudget() - usedAmount()));
+    const usedPercentage = createMemo(() => {
+        if (totalBudget() <= 0) return 0;
+        const percentage = (usedAmount() / totalBudget()) * 100;
+        // Cap at 100% to prevent display issues
+        const cappedPercentage = Math.min(percentage, 100);
+        console.log('Percentage calculation:', { usedAmount: usedAmount(), totalBudget: totalBudget(), percentage, cappedPercentage });
+        return cappedPercentage;
+    });
     const pendingCount = createMemo(() => 3); // Mock
     const pendingAmount = createMemo(() => 25000000); // Mock
 

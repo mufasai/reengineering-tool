@@ -77,13 +77,20 @@ const Sidebar: Component<SidebarProps> = (props) => {
     // 2. DATA MASTER ITEMS
     const dataMasterItems = [
         { icon: UsersIcon, label: 'People', id: 'PEOPLE' },
-        { icon: UsersIcon, label: 'Teams', id: 'TEAMS' },
     ];
+
+    const teamsItem = { icon: UsersIcon, label: 'Teams', id: 'TEAMS' };
 
     const canManageData = () => {
         const role = user()?.role || '';
         // Backend sends: "backoffice admin", "management", "admin" (lowercase with spaces)
         return ['backoffice admin', 'management', 'admin'].includes(role);
+    };
+
+    const canAccessTeams = () => {
+        const role = user()?.role || '';
+        // Backend sends: "team leader", "admin" (lowercase with spaces)
+        return ['team leader', 'admin'].includes(role);
     };
 
     // 3. PROJECT TYPES
@@ -207,6 +214,25 @@ const Sidebar: Component<SidebarProps> = (props) => {
                                 </button>
                             )}
                         </For>
+                    </div>
+                </Show>
+
+                {/* Teams - Separate section for Team Leader and Admin */}
+                <Show when={canAccessTeams()}>
+                    <Show when={!canManageData()}>
+                        <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">Data Master</p>
+                    </Show>
+                    <div class="px-2 space-y-1">
+                        <button
+                            onClick={() => props.onTabChange(teamsItem.id)}
+                            class={`w-full flex items-center gap-3 px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === teamsItem.id
+                                ? 'bg-navy-800 text-blue-400 font-semibold border-l-2 border-blue-500'
+                                : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'
+                                }`}
+                        >
+                            <teamsItem.icon class={`w-4 h-4 transition-colors ${props.activeTab === teamsItem.id ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
+                            <span>{teamsItem.label}</span>
+                        </button>
                     </div>
                 </Show>
 
