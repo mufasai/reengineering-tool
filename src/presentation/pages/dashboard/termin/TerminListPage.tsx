@@ -15,13 +15,43 @@ const TerminListPage: Component = () => {
     const [showReviewPage, setShowReviewPage] = createSignal(false);
     const [showApprovalPage, setShowApprovalPage] = createSignal(false);
     const [showPaymentPage, setShowPaymentPage] = createSignal(false);
+    const [activeTab, setActiveTab] = createSignal<string>('pending');
 
     const user = authStore.user;
-    const isFinance = () => user()?.role === 'finance';
-    const isDirector = () => user()?.role === 'management' || user()?.role === 'direktur';
+    const isFinance = () => user()?.role?.toLowerCase() === 'finance';
+    const isHeadOffice = () => {
+        const role = user()?.role?.toLowerCase().replace(/\s+/g, '_') || '';
+        return role === 'head_office' || role === 'backoffice_admin';
+    };
+    const isDirector = () => {
+        const role = user()?.role?.toLowerCase() || '';
+        return role === 'management' || role === 'direktur';
+    };
 
     const terminRepository = new TerminRepositoryImpl();
     const getAllTerminsUseCase = new GetAllTerminsInteractor(terminRepository);
+
+    // Get tabs based on role
+    const getTabs = () => {
+        if (isFinance()) {
+            return [
+                { id: 'pending', label: 'Perlu Dibayar' },
+                { id: 'completed', label: 'Sudah Dibayar' }
+            ];
+        } else if (isHeadOffice()) {
+            return [
+                { id: 'pending', label: 'Perlu Review' },
+                { id: 'completed', label: 'Sudah Direview' }
+            ];
+        } else if (isDirector()) {
+            return [
+                { id: 'pending', label: 'Perlu Persetujuan' },
+                { id: 'approved', label: 'Sudah Disetujui' },
+                { id: 'paid', label: 'Sudah Dibayar' }
+            ];
+        }
+        return [];
+    };
 
     onMount(async () => {
         await loadTermins();
@@ -53,19 +83,47 @@ const TerminListPage: Component = () => {
 
     const filteredTermins = () => {
         const role = user()?.role;
+        const tab = activeTab();
         let filtered = termins();
 
-        if (role === 'finance') {
-            filtered = filtered.filter(t =>
-                t.status === 'pending_review' ||
-                t.status === 'field_head_review' ||
-                t.status === 'approved'
-            );
-        } else if (role === 'management' || role === 'direktur') {
-            filtered = filtered.filter(t =>
-                t.status === 'reviewed' ||
-                t.status === 'director_approval'
-            );
+        if (isFinance()) {
+            if (tab === 'pending') {
+                // Perlu Dibayar
+                filtered = filtered.filter(t => t.status === 'approved');
+            } else {
+                // Sudah Dibayar
+                filtered = filtered.filter(t => t.status === 'paid');
+            }
+        } else if (isHeadOffice()) {
+            if (tab === 'pending') {
+                // Perlu Review
+                filtered = filtered.filter(t =>
+                    t.status === 'pending_review' ||
+                    t.status === 'field_head_review'
+                );
+            } else {
+                // Sudah Direview
+                filtered = filtered.filter(t =>
+                    t.status === 'reviewed' ||
+                    t.status === 'director_approval' ||
+                    t.status === 'approved' ||
+                    t.status === 'paid'
+                );
+            }
+        } else if (isDirector()) {
+            if (tab === 'pending') {
+                // Perlu Persetujuan
+                filtered = filtered.filter(t =>
+                    t.status === 'reviewed' ||
+                    t.status === 'director_approval'
+                );
+            } else if (tab === 'approved') {
+                // Sudah Disetujui (approved, belum dibayar)
+                filtered = filtered.filter(t => t.status === 'approved');
+            } else if (tab === 'paid') {
+                // Sudah Dibayar
+                filtered = filtered.filter(t => t.status === 'paid');
+            }
         }
 
         return filtered;
@@ -113,6 +171,12 @@ const TerminListPage: Component = () => {
             setShowPaymentPage(true);
             setShowReviewPage(false);
             setShowApprovalPage(false);
+        } else if (termin.status === 'paid') {
+            // For paid termins, show a simple detail view (read-only)
+            // We can reuse the approval page but it will be read-only
+            setShowApprovalPage(true);
+            setShowReviewPage(false);
+            setShowPaymentPage(false);
         }
 
         console.log('showReviewPage:', showReviewPage(), 'showApprovalPage:', showApprovalPage(), 'showPaymentPage:', showPaymentPage());
@@ -165,10 +229,30 @@ const TerminListPage: Component = () => {
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900">Daftar Termin</h1>
                     <p class="text-sm text-slate-600 mt-1">
-                        {isFinance() ? 'Termin yang perlu direview dan dibayar' :
-                            isDirector() ? 'Termin yang perlu disetujui' :
-                                'Daftar semua termin'}
+                        {isFinance() ? 'Kelola pembayaran termin' :
+                            isHeadOffice() ? 'Review termin dari team leader' :
+                                isDirector() ? 'Persetujuan termin' :
+                                    'Daftar semua termin'}
                     </p>
+                </div>
+
+                {/* Tabs */}
+                <div class="border-b border-slate-200">
+                    <div class="flex gap-4">
+                        <For each={getTabs()}>
+                            {(tab) => (
+                                <button
+                                    onClick={() => setActiveTab(tab.id)}
+                                    class={`px-4 py-2 text-sm font-semibold transition-all border-b-2 ${activeTab() === tab.id
+                                        ? 'border-blue-500 text-blue-600'
+                                        : 'border-transparent text-slate-600 hover:text-slate-900'
+                                        }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            )}
+                        </For>
+                    </div>
                 </div>
 
                 <Show
@@ -243,7 +327,8 @@ const TerminListPage: Component = () => {
                                                                 {termin.status === 'pending_review' || termin.status === 'field_head_review' ? 'Review' :
                                                                     termin.status === 'reviewed' || termin.status === 'director_approval' ? 'Setujui' :
                                                                         termin.status === 'approved' ? 'Bayar' :
-                                                                            'Lihat Detail'}
+                                                                            termin.status === 'paid' ? 'Lihat Detail' :
+                                                                                'Lihat Detail'}
                                                             </button>
                                                         </td>
                                                     </tr>

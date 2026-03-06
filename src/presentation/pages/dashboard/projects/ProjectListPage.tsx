@@ -3,21 +3,37 @@ import type { Component } from 'solid-js';
 import AgGridSolid from 'ag-grid-solid';
 import { authStore } from '../../../store/auth.store';
 import CreateProjectForm from './components/CreateProjectForm';
+import ImportProjectModal from './components/ImportProjectModal';
 import ProjectDetailPage from './ProjectDetailPage';
 import { projectRepository } from '../../../../infrastructure/repositories/project.repository.impl';
 import type { Project, UpdateProjectRequest } from '../../../../domain/entities/project.entity';
 
-const ProjectListPage: Component = () => {
+interface ProjectListPageProps {
+    filterType?: 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN' | 'BEBAN_OPERASIONAL';
+}
+
+const ProjectListPage: Component<ProjectListPageProps> = (props) => {
     const { user } = authStore;
     const [searchTerm, setSearchTerm] = createSignal('');
     const [statusFilter, setStatusFilter] = createSignal('');
     const [showModal, setShowModal] = createSignal(false);
+    const [showImportModal, setShowImportModal] = createSignal(false);
     const [submitting, setSubmitting] = createSignal(false);
     const [editingProject, setEditingProject] = createSignal<Project | null>(null);
     const [viewProject, setViewProject] = createSignal<Project | null>(null);
     const [detailProject, setDetailProject] = createSignal<Project | null>(null);
     const [deleteTarget, setDeleteTarget] = createSignal<{ id: string; name: string } | null>(null);
     const [deleting, setDeleting] = createSignal(false);
+
+    // Permission helpers
+    const canEdit = () => {
+        const role = user()?.role || '';
+        // Backend sends: "backoffice admin", "management", "admin" (lowercase with spaces)
+        // Only admin, backoffice admin, and management can edit projects
+        // Team leader can only view projects and work within sites
+        return ['admin', 'backoffice admin', 'management'].includes(role);
+    };
+    const isReadOnly = () => !canEdit();
 
     // Fetch projects from API
     const [projectsResource, { refetch }] = createResource(async () => {
@@ -40,6 +56,29 @@ const ProjectListPage: Component = () => {
         // RBAC logic
         if (currentUser.role === 'engineer') {
             return [];
+        }
+
+        // Filter by project type if filterType prop is provided
+        if (props.filterType) {
+            baseProjects = baseProjects.filter((p: Project) => {
+                // Normalize both values for comparison
+                const projectType = p.tipe?.toUpperCase().replace(/\s+/g, '');
+                const filterType = props.filterType?.toUpperCase().replace(/\s+/g, '');
+
+                // Handle special cases
+                if (filterType === 'BLACKSITE') {
+                    return projectType === 'BLACKSITE' || projectType === 'BLACK_SITE' || p.tipe?.toLowerCase().includes('black');
+                }
+
+                if (filterType === 'BEBAN_OPERASIONAL') {
+                    return projectType === 'BEBANOPERASIONAL' ||
+                        projectType === 'BEBAN_OPERASIONAL' ||
+                        p.tipe?.toLowerCase().includes('beban') ||
+                        p.tipe?.toLowerCase().includes('operasional');
+                }
+
+                return projectType === filterType || p.tipe?.toUpperCase().includes(filterType || '');
+            });
         }
 
         // Search & Status filtering
@@ -122,13 +161,15 @@ const ProjectListPage: Component = () => {
             field: 'tgi_start',
             headerName: 'Start Date',
             width: 130,
-            cellClass: 'text-slate-500 text-xs'
+            cellClass: 'text-slate-500 text-xs',
+            hide: true
         },
         {
             field: 'tgi_end',
             headerName: 'End Date',
             width: 130,
-            cellClass: 'text-slate-500 text-xs'
+            cellClass: 'text-slate-500 text-xs',
+            hide: true
         },
         {
             field: 'status',
@@ -150,19 +191,35 @@ const ProjectListPage: Component = () => {
             filter: false,
             cellRenderer: (params: any) => {
                 const project = params.data as Project;
-                return (
-                    <div class="flex items-center gap-1.5 h-full">
-                        <button onClick={() => setDetailProject(project)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100" title="View">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                        </button>
-                        <button onClick={() => handleEditProject(project)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-all border border-slate-100" title="Edit">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
-                        </button>
-                        <button onClick={() => handleDeleteProject(project.id, project.name)} class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all border border-slate-100" title="Delete">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                        </button>
-                    </div>
-                );
+                const container = document.createElement('div');
+                container.className = 'flex items-center gap-1.5 h-full';
+
+                // View button - always visible
+                const viewBtn = document.createElement('button');
+                viewBtn.className = 'w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100';
+                viewBtn.title = 'View';
+                viewBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>';
+                viewBtn.onclick = () => setDetailProject(project);
+                container.appendChild(viewBtn);
+
+                // Edit and Delete buttons - only for users who can edit
+                if (canEdit()) {
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-all border border-slate-100';
+                    editBtn.title = 'Edit';
+                    editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>';
+                    editBtn.onclick = () => handleEditProject(project);
+                    container.appendChild(editBtn);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all border border-slate-100';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>';
+                    deleteBtn.onclick = () => handleDeleteProject(project.id, project.name);
+                    container.appendChild(deleteBtn);
+                }
+
+                return container;
             }
         }
     ];
@@ -220,16 +277,37 @@ const ProjectListPage: Component = () => {
             <div class="space-y-8 animate-in fade-in duration-500">
                 <header class="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
-                        <h1 class="text-4xl font-bold tracking-tight text-slate-900 font-display">All Projects</h1>
-                        <p class="text-slate-500 mt-2 font-normal">Manage and monitor all reengineering projects.</p>
+                        <h1 class="text-4xl font-bold tracking-tight text-slate-900 font-display">
+                            {props.filterType ? `${props.filterType} Projects` : 'All Projects'}
+                        </h1>
+                        <p class="text-slate-500 mt-2 font-normal">
+                            {props.filterType
+                                ? `Showing ${props.filterType} type projects`
+                                : 'Manage and monitor all reengineering projects.'}
+                        </p>
                     </div>
-                    <button
-                        onClick={() => { setEditingProject(null); setShowModal(true); }}
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95 translate-y-0 hover:translate-y-[-2px]"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14" /></svg>
-                        New Project
-                    </button>
+                    <Show when={canEdit()}>
+                        <div class="flex gap-3">
+                            <button
+                                onClick={() => setShowImportModal(true)}
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 active:scale-95 translate-y-0 hover:translate-y-[-2px]"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                Import Excel
+                            </button>
+                            <button
+                                onClick={() => { setEditingProject(null); setShowModal(true); }}
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95 translate-y-0 hover:translate-y-[-2px]"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14" /></svg>
+                                New Project
+                            </button>
+                        </div>
+                    </Show>
                 </header>
 
                 <div class="bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-sm p-8 space-y-6">
@@ -257,13 +335,13 @@ const ProjectListPage: Component = () => {
                         </div>
 
                         <div class="flex items-center gap-3 w-full lg:w-auto overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
-                            {/* Date Range Picker (Mock) */}
-                            <div class="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-500 text-[10px] tracking-widest uppercase whitespace-nowrap">
+                            {/* Date Range Picker (Mock) - HIDDEN */}
+                            {/* <div class="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-500 text-[10px] tracking-widest uppercase whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
                                 <span>Tgl Start</span>
                                 <span class="text-slate-300">—</span>
                                 <span>Tgl End</span>
-                            </div>
+                            </div> */}
 
                             {/* Export Buttons */}
                             <div class="flex items-center gap-2">
@@ -464,6 +542,13 @@ const ProjectListPage: Component = () => {
                         </div>
                     )}
                 </Show>
+
+                {/* Import Project Modal */}
+                <ImportProjectModal
+                    show={showImportModal()}
+                    onClose={() => setShowImportModal(false)}
+                    onSuccess={() => refetch()}
+                />
             </div>
         </Show>
     );

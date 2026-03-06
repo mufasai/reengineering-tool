@@ -22,6 +22,17 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
     const [loading, setLoading] = createSignal(false);
     const [error, setError] = createSignal('');
 
+    // Check if user is Director
+    const isDirector = () => {
+        const role = authStore.user()?.role;
+        return role === 'management' || role === 'direktur';
+    };
+
+    // Check if user is Finance
+    const isFinance = () => {
+        return authStore.user()?.role === 'finance';
+    };
+
     // Use terminData from props if available, otherwise use mock data
     const getTerminData = () => {
         if (props.terminData) {
@@ -308,7 +319,7 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                             const iconColor = alert.alertColor === 'cyan' ? 'text-cyan-400' : 'text-yellow-400';
                             const textColor = alert.alertColor === 'cyan' ? 'text-cyan-800' : 'text-yellow-800';
                             const descColor = alert.alertColor === 'cyan' ? 'text-cyan-700' : 'text-yellow-700';
-                            const emoji = alert.alertColor === 'cyan' ? '💰' : '⚠️';
+                            const emoji = alert.alertColor === 'cyan';
 
                             return (
                                 <div class={`${bgColor} border-l-4 p-4 rounded-lg`}>
@@ -320,7 +331,7 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                                             <h3 class={`text-sm font-semibold ${textColor} mb-1`}>{emoji} {alert.title}</h3>
                                             <p class={`text-sm ${descColor} mb-3 whitespace-pre-line`}>{alert.message}</p>
 
-                                            {alert.showApproveButtons && (
+                                            {alert.showApproveButtons && isDirector() && (
                                                 <>
                                                     {error() && (
                                                         <div class="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-xs">
@@ -353,7 +364,15 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                                                 </>
                                             )}
 
-                                            {alert.showPaymentButton && (
+                                            {alert.showApproveButtons && !isDirector() && (
+                                                <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                                    <p class="text-xs text-yellow-700">
+                                                        <span class="font-semibold">Akses Terbatas:</span> Hanya Direktur yang dapat menyetujui atau menolak termin.
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {alert.showPaymentButton && isFinance() && (
                                                 <button
                                                     onClick={handlePaymentTermin}
                                                     class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2"
@@ -364,6 +383,14 @@ const TerminDetailPage: Component<TerminDetailPageProps> = (props) => {
                                                     </svg>
                                                     Proses Pembayaran
                                                 </button>
+                                            )}
+
+                                            {alert.showPaymentButton && !isFinance() && (
+                                                <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                                    <p class="text-xs text-yellow-700">
+                                                        <span class="font-semibold">Akses Terbatas:</span> Hanya Finance yang dapat melakukan pembayaran termin.
+                                                    </p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>

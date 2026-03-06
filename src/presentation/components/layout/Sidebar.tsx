@@ -1,6 +1,8 @@
-import { For, Show } from 'solid-js';
+import { For, Show, createResource, createMemo } from 'solid-js';
 import type { Component } from 'solid-js';
 import { authStore } from '../../store/auth.store';
+import { projectRepository } from '../../../infrastructure/repositories/project.repository.impl';
+import type { Project } from '../../../domain/entities/project.entity';
 
 // Icons as inline SVGs to match lucide-react and design exactly
 const DashboardIcon = (props: { class?: string }) => (
@@ -43,23 +45,64 @@ interface SidebarProps {
 const Sidebar: Component<SidebarProps> = (props) => {
     const user = () => authStore.user();
 
+    // Fetch projects for counting
+    const [projectsResource] = createResource(async () => {
+        try {
+            return await projectRepository.findAll();
+        } catch (error) {
+            console.error('Failed to load projects for sidebar:', error);
+            return [];
+        }
+    });
+
+    const projects = () => projectsResource() || [];
+
+    // Calculate project counts by type
+    const getProjectCountByType = (type: string) => {
+        return projects().filter((p: Project) => {
+            const projectType = p.tipe?.toUpperCase().replace(/\s+/g, '');
+            const filterType = type.toUpperCase().replace(/\s+/g, '');
+
+            if (filterType === 'BLACKSITE') {
+                return projectType === 'BLACKSITE' || projectType === 'BLACK_SITE' || p.tipe?.toLowerCase().includes('black');
+            }
+
+            if (filterType === 'BEBAN_OPERASIONAL') {
+                return projectType === 'BEBANOPERASIONAL' ||
+                    projectType === 'BEBAN_OPERASIONAL' ||
+                    p.tipe?.toLowerCase().includes('beban') ||
+                    p.tipe?.toLowerCase().includes('operasional');
+            }
+
+            return projectType === filterType || p.tipe?.toUpperCase().includes(filterType);
+        }).length;
+    };
+
     // 1. PROJECT MANAGEMENT ITEMS
     const projectManagementItems = () => {
         const items = [{ icon: DashboardIcon, label: 'Dashboard', id: 'DASHBOARD' }];
         const role = user()?.role || '';
 
-        if (['backoffice_admin', 'management', 'team_leader', 'admin'].includes(role)) {
+        // Backend sends roles in lowercase with spaces: "backoffice admin", "team leader", "head office"
+        console.log('Current user role:', role);
+
+        if (['backoffice admin', 'management', 'team leader', 'admin'].includes(role)) {
             items.push({ icon: WorkOrderIcon, label: 'Work Orders', id: 'WO' });
         }
 
         items.push({ icon: FileTextIcon, label: 'SPK', id: 'SPK' });
 
-        if (['backoffice_admin', 'finance', 'management', 'admin'].includes(role)) {
+        // All Projects menu - includes team leader, head office, direktur, finance
+        const projectAllowedRoles = ['backoffice admin', 'finance', 'management', 'admin', 'team leader', 'head office', 'direktur'];
+
+        if (projectAllowedRoles.includes(role)) {
             items.push({ icon: FolderIcon, label: 'All Projects', id: 'PROJECTS' });
         }
 
-        // Add Termin menu for Finance and Director
-        if (['finance', 'management', 'direktur'].includes(role)) {
+        // Add Termin menu for Finance, Head Office, Director, and Team Leader
+        const terminAllowedRoles = ['finance', 'head office', 'backoffice admin', 'management', 'direktur', 'team leader'];
+
+        if (terminAllowedRoles.includes(role)) {
             items.push({ icon: ReceiptIcon, label: 'Termin', id: 'TERMIN' });
         }
 
@@ -69,19 +112,31 @@ const Sidebar: Component<SidebarProps> = (props) => {
     // 2. DATA MASTER ITEMS
     const dataMasterItems = [
         { icon: UsersIcon, label: 'People', id: 'PEOPLE' },
-        { icon: UsersIcon, label: 'Teams', id: 'TEAMS' },
     ];
 
-    const canManageData = () => ['backoffice_admin', 'management', 'admin'].includes(user()?.role || '');
+    const teamsItem = { icon: UsersIcon, label: 'Teams', id: 'TEAMS' };
 
-    // 3. PROJECT TYPES
-    const projectTypes = [
-        { id: 'BLACKSITE', label: 'Blacksite', colorClass: 'bg-red-500', count: 4 },
-        { id: 'COMBAT', label: 'Combat', colorClass: 'bg-amber-500', count: 12 },
-        { id: 'FILTER', label: 'Filter', colorClass: 'bg-emerald-500', count: 8 },
-        { id: 'L2H', label: 'L2H', colorClass: 'bg-blue-600', count: 3 },
-        { id: 'REFINEN', label: 'Refinen', colorClass: 'bg-purple-600', count: 0 }
-    ];
+    const canManageData = () => {
+        const role = user()?.role || '';
+        // Backend sends: "backoffice admin", "management", "admin" (lowercase with spaces)
+        return ['backoffice admin', 'management', 'admin'].includes(role);
+    };
+
+    const canAccessTeams = () => {
+        const role = user()?.role || '';
+        // Backend sends: "team leader", "admin" (lowercase with spaces)
+        return ['team leader', 'admin'].includes(role);
+    };
+
+    // 3. PROJECT TYPES - Dynamic counts
+    const projectTypes = createMemo(() => [
+        { id: 'BLACKSITE', label: 'Blacksite', colorClass: 'bg-red-500', count: getProjectCountByType('BLACKSITE') },
+        { id: 'COMBAT', label: 'Combat', colorClass: 'bg-amber-500', count: getProjectCountByType('COMBAT') },
+        { id: 'FILTER', label: 'Filter', colorClass: 'bg-emerald-500', count: getProjectCountByType('FILTER') },
+        { id: 'L2H', label: 'L2H', colorClass: 'bg-blue-600', count: getProjectCountByType('L2H') },
+        { id: 'REFINEN', label: 'Refinen', colorClass: 'bg-purple-600', count: getProjectCountByType('REFINEN') },
+        { id: 'BEBAN_OPERASIONAL', label: 'Beban Operasional', colorClass: 'bg-cyan-500', count: getProjectCountByType('BEBAN_OPERASIONAL') }
+    ]);
 
     return (
         <aside class="h-screen w-64 bg-navy-900 text-white flex flex-col z-50 transition-all duration-300 border-r border-navy-800 flex-shrink-0 sticky top-0">
@@ -145,13 +200,16 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 {/* 2. PROJECT TYPES */}
                 <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">Project Types</p>
                 <div class="px-2 space-y-1">
-                    <For each={projectTypes}>
+                    <For each={projectTypes()}>
                         {(type) => {
-                            const isRestricted = ['engineer', 'team_leader'].includes(user()?.role || '');
+                            const role = user()?.role || '';
+                            // Backend sends: "team leader" (lowercase with space)
+                            const isRestricted = ['engineer', 'team leader'].includes(role);
                             if (isRestricted && type.count === 0) return null;
 
                             return (
                                 <button
+                                    onClick={() => props.onTabChange(type.id)}
                                     class={`w-full flex items-center justify-between px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === type.id
                                         ? 'bg-navy-800 text-white font-bold border-l-2 border-blue-600'
                                         : 'text-slate-400 hover:text-white hover:bg-navy-800 border-l-2 border-transparent font-medium'
@@ -196,8 +254,31 @@ const Sidebar: Component<SidebarProps> = (props) => {
                     </div>
                 </Show>
 
+                {/* Teams - Separate section for Team Leader and Admin */}
+                <Show when={canAccessTeams()}>
+                    <Show when={!canManageData()}>
+                        <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">Data Master</p>
+                    </Show>
+                    <div class="px-2 space-y-1">
+                        <button
+                            onClick={() => props.onTabChange(teamsItem.id)}
+                            class={`w-full flex items-center gap-3 px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === teamsItem.id
+                                ? 'bg-navy-800 text-blue-400 font-semibold border-l-2 border-blue-500'
+                                : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'
+                                }`}
+                        >
+                            <teamsItem.icon class={`w-4 h-4 transition-colors ${props.activeTab === teamsItem.id ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
+                            <span>{teamsItem.label}</span>
+                        </button>
+                    </div>
+                </Show>
+
                 {/* 4. SYSTEM */}
-                <Show when={user()?.role === 'management' || user()?.role === 'admin'}>
+                <Show when={() => {
+                    const role = user()?.role || '';
+                    // Backend sends: "management", "admin" (lowercase)
+                    return role === 'management' || role === 'admin';
+                }}>
                     <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">System</p>
                     <div class="px-2 space-y-1 pb-10">
                         <button
