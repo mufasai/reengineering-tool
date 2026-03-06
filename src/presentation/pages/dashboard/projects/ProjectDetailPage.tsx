@@ -183,13 +183,13 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
             minWidth: 200,
             cellClass: 'text-slate-700 text-xs'
         },
-        {
-            field: 'pekerjaan',
-            headerName: 'Pekerjaan',
-            flex: 1,
-            minWidth: 150,
-            cellClass: 'text-slate-700 text-xs'
-        },
+        // {
+        //     field: 'pekerjaan',
+        //     headerName: 'Pekerjaan',
+        //     flex: 1,
+        //     minWidth: 150,
+        //     cellClass: 'text-slate-700 text-xs'
+        // },
         {
             field: 'lokasi',
             headerName: 'Location',

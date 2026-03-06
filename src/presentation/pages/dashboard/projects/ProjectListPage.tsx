@@ -3,15 +3,21 @@ import type { Component } from 'solid-js';
 import AgGridSolid from 'ag-grid-solid';
 import { authStore } from '../../../store/auth.store';
 import CreateProjectForm from './components/CreateProjectForm';
+import ImportProjectModal from './components/ImportProjectModal';
 import ProjectDetailPage from './ProjectDetailPage';
 import { projectRepository } from '../../../../infrastructure/repositories/project.repository.impl';
 import type { Project, UpdateProjectRequest } from '../../../../domain/entities/project.entity';
 
-const ProjectListPage: Component = () => {
+interface ProjectListPageProps {
+    filterType?: 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN' | 'BEBAN_OPERASIONAL';
+}
+
+const ProjectListPage: Component<ProjectListPageProps> = (props) => {
     const { user } = authStore;
     const [searchTerm, setSearchTerm] = createSignal('');
     const [statusFilter, setStatusFilter] = createSignal('');
     const [showModal, setShowModal] = createSignal(false);
+    const [showImportModal, setShowImportModal] = createSignal(false);
     const [submitting, setSubmitting] = createSignal(false);
     const [editingProject, setEditingProject] = createSignal<Project | null>(null);
     const [viewProject, setViewProject] = createSignal<Project | null>(null);
@@ -50,6 +56,29 @@ const ProjectListPage: Component = () => {
         // RBAC logic
         if (currentUser.role === 'engineer') {
             return [];
+        }
+
+        // Filter by project type if filterType prop is provided
+        if (props.filterType) {
+            baseProjects = baseProjects.filter((p: Project) => {
+                // Normalize both values for comparison
+                const projectType = p.tipe?.toUpperCase().replace(/\s+/g, '');
+                const filterType = props.filterType?.toUpperCase().replace(/\s+/g, '');
+
+                // Handle special cases
+                if (filterType === 'BLACKSITE') {
+                    return projectType === 'BLACKSITE' || projectType === 'BLACK_SITE' || p.tipe?.toLowerCase().includes('black');
+                }
+
+                if (filterType === 'BEBAN_OPERASIONAL') {
+                    return projectType === 'BEBANOPERASIONAL' ||
+                        projectType === 'BEBAN_OPERASIONAL' ||
+                        p.tipe?.toLowerCase().includes('beban') ||
+                        p.tipe?.toLowerCase().includes('operasional');
+                }
+
+                return projectType === filterType || p.tipe?.toUpperCase().includes(filterType || '');
+            });
         }
 
         // Search & Status filtering
@@ -248,17 +277,36 @@ const ProjectListPage: Component = () => {
             <div class="space-y-8 animate-in fade-in duration-500">
                 <header class="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
-                        <h1 class="text-4xl font-bold tracking-tight text-slate-900 font-display">All Projects</h1>
-                        <p class="text-slate-500 mt-2 font-normal">Manage and monitor all reengineering projects.</p>
+                        <h1 class="text-4xl font-bold tracking-tight text-slate-900 font-display">
+                            {props.filterType ? `${props.filterType} Projects` : 'All Projects'}
+                        </h1>
+                        <p class="text-slate-500 mt-2 font-normal">
+                            {props.filterType
+                                ? `Showing ${props.filterType} type projects`
+                                : 'Manage and monitor all reengineering projects.'}
+                        </p>
                     </div>
                     <Show when={canEdit()}>
-                        <button
-                            onClick={() => { setEditingProject(null); setShowModal(true); }}
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95 translate-y-0 hover:translate-y-[-2px]"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14" /></svg>
-                            New Project
-                        </button>
+                        <div class="flex gap-3">
+                            <button
+                                onClick={() => setShowImportModal(true)}
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 active:scale-95 translate-y-0 hover:translate-y-[-2px]"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                Import Excel
+                            </button>
+                            <button
+                                onClick={() => { setEditingProject(null); setShowModal(true); }}
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95 translate-y-0 hover:translate-y-[-2px]"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7v14" /></svg>
+                                New Project
+                            </button>
+                        </div>
                     </Show>
                 </header>
 
@@ -494,6 +542,13 @@ const ProjectListPage: Component = () => {
                         </div>
                     )}
                 </Show>
+
+                {/* Import Project Modal */}
+                <ImportProjectModal
+                    show={showImportModal()}
+                    onClose={() => setShowImportModal(false)}
+                    onSuccess={() => refetch()}
+                />
             </div>
         </Show>
     );

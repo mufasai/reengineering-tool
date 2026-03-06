@@ -694,10 +694,10 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                     <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                         <h2 class="text-lg font-bold text-slate-900 mb-4">Informasi Site</h2>
                         <div class="space-y-3">
-                            <div class="flex justify-between py-2 border-b border-slate-100">
+                            {/* <div class="flex justify-between py-2 border-b border-slate-100">
                                 <span class="text-sm text-slate-500">ID</span>
                                 <span class="text-sm font-medium text-slate-900">{props.site.id.split(':')[1]}</span>
-                            </div>
+                            </div> */}
                             <div class="flex justify-between py-2 border-b border-slate-100">
                                 <span class="text-sm text-slate-500">Project</span>
                                 <span class="text-sm font-medium text-slate-900">Example Project / Site</span>
@@ -708,12 +708,12 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                             </div>
                             <div class="flex justify-between py-2 border-b border-slate-100">
                                 <span class="text-sm text-slate-500">Site Info</span>
-                                <span class="text-sm font-medium text-slate-900">{props.site.site_info}</span>
+                                <span class="text-sm font-medium text-slate-900 max-w-98">{props.site.site_info}</span>
                             </div>
-                            <div class="flex justify-between py-2 border-b border-slate-100">
+                            {/* <div class="flex justify-between py-2 border-b border-slate-100">
                                 <span class="text-sm text-slate-500">Nama Pekerjaan</span>
                                 <span class="text-sm font-medium text-slate-900">{props.site.pekerjaan}</span>
-                            </div>
+                            </div> */}
                             <div class="flex justify-between py-2 border-b border-slate-100">
                                 <span class="text-sm text-slate-500">Lokasi</span>
                                 <span class="text-sm font-medium text-slate-900">{props.site.lokasi}</span>

@@ -1,6 +1,8 @@
-import { For, Show } from 'solid-js';
+import { For, Show, createResource, createMemo } from 'solid-js';
 import type { Component } from 'solid-js';
 import { authStore } from '../../store/auth.store';
+import { projectRepository } from '../../../infrastructure/repositories/project.repository.impl';
+import type { Project } from '../../../domain/entities/project.entity';
 
 // Icons as inline SVGs to match lucide-react and design exactly
 const DashboardIcon = (props: { class?: string }) => (
@@ -42,6 +44,39 @@ interface SidebarProps {
 
 const Sidebar: Component<SidebarProps> = (props) => {
     const user = () => authStore.user();
+
+    // Fetch projects for counting
+    const [projectsResource] = createResource(async () => {
+        try {
+            return await projectRepository.findAll();
+        } catch (error) {
+            console.error('Failed to load projects for sidebar:', error);
+            return [];
+        }
+    });
+
+    const projects = () => projectsResource() || [];
+
+    // Calculate project counts by type
+    const getProjectCountByType = (type: string) => {
+        return projects().filter((p: Project) => {
+            const projectType = p.tipe?.toUpperCase().replace(/\s+/g, '');
+            const filterType = type.toUpperCase().replace(/\s+/g, '');
+
+            if (filterType === 'BLACKSITE') {
+                return projectType === 'BLACKSITE' || projectType === 'BLACK_SITE' || p.tipe?.toLowerCase().includes('black');
+            }
+
+            if (filterType === 'BEBAN_OPERASIONAL') {
+                return projectType === 'BEBANOPERASIONAL' ||
+                    projectType === 'BEBAN_OPERASIONAL' ||
+                    p.tipe?.toLowerCase().includes('beban') ||
+                    p.tipe?.toLowerCase().includes('operasional');
+            }
+
+            return projectType === filterType || p.tipe?.toUpperCase().includes(filterType);
+        }).length;
+    };
 
     // 1. PROJECT MANAGEMENT ITEMS
     const projectManagementItems = () => {
@@ -93,14 +128,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
         return ['team leader', 'admin'].includes(role);
     };
 
-    // 3. PROJECT TYPES
-    const projectTypes = [
-        { id: 'BLACKSITE', label: 'Blacksite', colorClass: 'bg-red-500', count: 4 },
-        { id: 'COMBAT', label: 'Combat', colorClass: 'bg-amber-500', count: 12 },
-        { id: 'FILTER', label: 'Filter', colorClass: 'bg-emerald-500', count: 8 },
-        { id: 'L2H', label: 'L2H', colorClass: 'bg-blue-600', count: 3 },
-        { id: 'REFINEN', label: 'Refinen', colorClass: 'bg-purple-600', count: 0 }
-    ];
+    // 3. PROJECT TYPES - Dynamic counts
+    const projectTypes = createMemo(() => [
+        { id: 'BLACKSITE', label: 'Blacksite', colorClass: 'bg-red-500', count: getProjectCountByType('BLACKSITE') },
+        { id: 'COMBAT', label: 'Combat', colorClass: 'bg-amber-500', count: getProjectCountByType('COMBAT') },
+        { id: 'FILTER', label: 'Filter', colorClass: 'bg-emerald-500', count: getProjectCountByType('FILTER') },
+        { id: 'L2H', label: 'L2H', colorClass: 'bg-blue-600', count: getProjectCountByType('L2H') },
+        { id: 'REFINEN', label: 'Refinen', colorClass: 'bg-purple-600', count: getProjectCountByType('REFINEN') },
+        { id: 'BEBAN_OPERASIONAL', label: 'Beban Operasional', colorClass: 'bg-cyan-500', count: getProjectCountByType('BEBAN_OPERASIONAL') }
+    ]);
 
     return (
         <aside class="h-screen w-64 bg-navy-900 text-white flex flex-col z-50 transition-all duration-300 border-r border-navy-800 flex-shrink-0 sticky top-0">
@@ -164,7 +200,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 {/* 2. PROJECT TYPES */}
                 <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">Project Types</p>
                 <div class="px-2 space-y-1">
-                    <For each={projectTypes}>
+                    <For each={projectTypes()}>
                         {(type) => {
                             const role = user()?.role || '';
                             // Backend sends: "team leader" (lowercase with space)
@@ -173,6 +209,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
                             return (
                                 <button
+                                    onClick={() => props.onTabChange(type.id)}
                                     class={`w-full flex items-center justify-between px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === type.id
                                         ? 'bg-navy-800 text-white font-bold border-l-2 border-blue-600'
                                         : 'text-slate-400 hover:text-white hover:bg-navy-800 border-l-2 border-transparent font-medium'

@@ -5,7 +5,7 @@ import type { MaterialTransaction, Material, CreateMaterialRequest } from "../en
 
 import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from "../entities/auth.entity";
 
-import type { Project, CreateProjectRequest, UpdateProjectRequest } from "../entities/project.entity";
+import type { Project, CreateProjectRequest, UpdateProjectRequest, ImportProjectRequest, ImportProjectResponse } from "../entities/project.entity";
 
 import type { Person, CreatePersonRequest } from "../entities/person.entity";
 
@@ -25,6 +25,7 @@ export interface ProjectRepository {
     update(id: string, project: UpdateProjectRequest): Promise<Project>;
     getFiles(projectId: string): Promise<ProjectFile[]>;
     uploadFile(projectId: string, request: UploadProjectFileRequest): Promise<ProjectFile>;
+    importFromExcel(request: ImportProjectRequest): Promise<ImportProjectResponse>;
 }
 
 export interface SiteRepository {

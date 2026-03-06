@@ -1,6 +1,6 @@
 import { apiClient } from "../api/api-client";
 import type { ProjectRepository } from "../../domain/repositories/interfaces";
-import type { Project, ApiResponse, CreateProjectRequest, UpdateProjectRequest } from "../../domain/entities/project.entity";
+import type { Project, ApiResponse, CreateProjectRequest, UpdateProjectRequest, ImportProjectRequest, ImportProjectResponse } from "../../domain/entities/project.entity";
 import type { ProjectFile, ProjectFilesApiResponse, UploadProjectFileRequest, UploadProjectFileResponse } from "../../domain/entities/project-file.entity";
 
 export class ProjectRepositoryImpl implements ProjectRepository {
@@ -53,6 +53,17 @@ export class ProjectRepositoryImpl implements ProjectRepository {
             formData
         );
         return response.data;
+    }
+
+    async importFromExcel(request: ImportProjectRequest): Promise<ImportProjectResponse> {
+        const formData = new FormData();
+        formData.append('file', request.file);
+
+        const response = await apiClient.postFormData<ImportProjectResponse>(
+            '/api/projects/import-excel',
+            formData
+        );
+        return response;
     }
 }
 

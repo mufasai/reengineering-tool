@@ -15,7 +15,7 @@ import { authStore } from './presentation/store/auth.store';
 import './index.css';
 
 const App: Component = () => {
-  const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'PEOPLE' | 'TEAMS' | 'SYSTEM' | 'TERMIN' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN'>('DASHBOARD');
+  const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'PEOPLE' | 'TEAMS' | 'SYSTEM' | 'TERMIN' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN' | 'BEBAN_OPERASIONAL'>('DASHBOARD');
   const [authView, setAuthView] = createSignal<'login' | 'register'>('login');
   const [isLoggedIn, setIsLoggedIn] = createSignal(false);
 
@@ -98,13 +98,31 @@ const App: Component = () => {
                 <Match when={activeTab() === 'TERMIN'}>
                   <TerminListPage />
                 </Match>
-                {/* Fallback for other tabs not yet implemented as full pages */}
-                <Match when={true}>
+                {/* Project Type Filters */}
+                <Match when={activeTab() === 'BLACKSITE'}>
+                  <ProjectListPage filterType="BLACKSITE" />
+                </Match>
+                <Match when={activeTab() === 'COMBAT'}>
+                  <ProjectListPage filterType="COMBAT" />
+                </Match>
+                <Match when={activeTab() === 'FILTER'}>
+                  <ProjectListPage filterType="FILTER" />
+                </Match>
+                <Match when={activeTab() === 'L2H'}>
+                  <ProjectListPage filterType="L2H" />
+                </Match>
+                <Match when={activeTab() === 'REFINEN'}>
+                  <ProjectListPage filterType="REFINEN" />
+                </Match>
+                <Match when={activeTab() === 'BEBAN_OPERASIONAL'}>
+                  <ProjectListPage filterType="BEBAN_OPERASIONAL" />
+                </Match>
+                <Match when={activeTab() === 'SPK'}>
                   <div class="flex flex-col items-center justify-center h-[calc(100vh-64px)] text-white/50">
                     <div class="w-16 h-16 mb-4 bg-white/5 rounded-2xl flex items-center justify-center">
                       <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
                     </div>
-                    <h2 class="text-xl font-bold text-white mb-2">{activeTab()} Page</h2>
+                    <h2 class="text-xl font-bold text-white mb-2">SPK Page</h2>
                     <p class="text-sm">This page is currently under implementation.</p>
                   </div>
                 </Match>
