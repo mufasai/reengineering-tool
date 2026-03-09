@@ -17,10 +17,24 @@ export interface Team {
     updated_at: string;
 }
 
-export interface Personnel {
+// Site Team Member (from team structure API)
+export interface SiteTeamMember {
     id: string;
-    name: string;
-    role: string;
+    site_id: string;
+    team_master_id: string;
+    role: string | null;
+    vendor: string | null;
+    nik: string;
+    nama: string;
+    no_hp: string;
+    jabatan: string;
+    regional: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AddTeamToSiteRequest {
+    team_master_id: string;
 }
 
 export interface UploadTeamsRequest {

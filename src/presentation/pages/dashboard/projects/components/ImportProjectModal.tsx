@@ -1,6 +1,7 @@
 import { createSignal, Show } from 'solid-js';
 import type { Component } from 'solid-js';
 import { projectRepository } from '../../../../../infrastructure/repositories/project.repository.impl';
+import { projectStore } from '../../../../store/project.store';
 import { ImportProjectInteractor } from '../../../../../application/use-cases/import-project.use-case';
 
 const importProjectUseCase = new ImportProjectInteractor(projectRepository);
@@ -50,6 +51,9 @@ const ImportProjectModal: Component<ImportProjectModalProps> = (props) => {
                     `Sites Failed: ${response.data.sites_failed}\n\n` +
                     `${summary.message}`
                 );
+
+                // Refresh projects in store (automatically updates sidebar counts)
+                await projectStore.refreshProjects();
 
                 // Close modal and refresh list after 3 seconds
                 setTimeout(() => {
