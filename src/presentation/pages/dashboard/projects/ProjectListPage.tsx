@@ -1,7 +1,8 @@
-import { createSignal, createMemo, Show, createResource } from 'solid-js';
+import { createSignal, createMemo, Show } from 'solid-js';
 import type { Component } from 'solid-js';
 import AgGridSolid from 'ag-grid-solid';
 import { authStore } from '../../../store/auth.store';
+import { projectStore } from '../../../store/project.store';
 import CreateProjectForm from './components/CreateProjectForm';
 import ImportProjectModal from './components/ImportProjectModal';
 import ProjectDetailPage from './ProjectDetailPage';
@@ -33,19 +34,9 @@ const ProjectListPage: Component<ProjectListPageProps> = (props) => {
         // Team leader can only view projects and work within sites
         return ['admin', 'backoffice admin', 'management'].includes(role);
     };
-    const isReadOnly = () => !canEdit();
 
-    // Fetch projects from API
-    const [projectsResource, { refetch }] = createResource(async () => {
-        try {
-            return await projectRepository.findAll();
-        } catch (error) {
-            console.error('Failed to fetch projects:', error);
-            return [];
-        }
-    });
-
-    const projects = () => projectsResource() || [];
+    // Use shared project store for reactive updates
+    const projects = () => projectStore.projects();
 
     const filteredData = createMemo(() => {
         const currentUser = user();
@@ -148,7 +139,7 @@ const ProjectListPage: Component<ProjectListPageProps> = (props) => {
         {
             field: 'tipe',
             headerName: 'Type',
-            width: 120,
+            width: 140,
             cellRenderer: (params: any) => (
                 <div class="flex items-center h-full">
                     <span class={`px-2 py-0.5 rounded text-[10px] uppercase tracking-wide border ${getTypeStyles(params.value)}`}>
@@ -189,6 +180,7 @@ const ProjectListPage: Component<ProjectListPageProps> = (props) => {
             width: 150,
             sortable: false,
             filter: false,
+            pinned: 'right',
             cellRenderer: (params: any) => {
                 const project = params.data as Project;
                 const container = document.createElement('div');
@@ -238,7 +230,10 @@ const ProjectListPage: Component<ProjectListPageProps> = (props) => {
             } else {
                 await projectRepository.create(data);
             }
-            await refetch();
+
+            // Refresh projects in store (automatically updates sidebar counts)
+            await projectStore.refreshProjects();
+
             setShowModal(false);
             setEditingProject(null);
         } catch (error) {
@@ -260,7 +255,9 @@ const ProjectListPage: Component<ProjectListPageProps> = (props) => {
         try {
             await projectRepository.delete(target.id);
             setDeleteTarget(null);
-            await refetch();
+
+            // Refresh projects in store (automatically updates sidebar counts)
+            await projectStore.refreshProjects();
         } catch (error) {
             console.error('Failed to delete project:', error);
             alert('Gagal menghapus project: ' + (error as Error).message);
@@ -547,7 +544,7 @@ const ProjectListPage: Component<ProjectListPageProps> = (props) => {
                 <ImportProjectModal
                     show={showImportModal()}
                     onClose={() => setShowImportModal(false)}
-                    onSuccess={() => refetch()}
+                    onSuccess={() => projectStore.refreshProjects()}
                 />
             </div>
         </Show>

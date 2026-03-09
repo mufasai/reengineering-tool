@@ -1,7 +1,7 @@
-import { For, Show, createResource, createMemo } from 'solid-js';
+import { For, Show, createMemo } from 'solid-js';
 import type { Component } from 'solid-js';
 import { authStore } from '../../store/auth.store';
-import { projectRepository } from '../../../infrastructure/repositories/project.repository.impl';
+import { projectStore } from '../../store/project.store';
 import type { Project } from '../../../domain/entities/project.entity';
 
 // Icons as inline SVGs to match lucide-react and design exactly
@@ -45,17 +45,8 @@ interface SidebarProps {
 const Sidebar: Component<SidebarProps> = (props) => {
     const user = () => authStore.user();
 
-    // Fetch projects for counting
-    const [projectsResource] = createResource(async () => {
-        try {
-            return await projectRepository.findAll();
-        } catch (error) {
-            console.error('Failed to load projects for sidebar:', error);
-            return [];
-        }
-    });
-
-    const projects = () => projectsResource() || [];
+    // Use shared project store for reactive updates
+    const projects = () => projectStore.projects();
 
     // Calculate project counts by type
     const getProjectCountByType = (type: string) => {

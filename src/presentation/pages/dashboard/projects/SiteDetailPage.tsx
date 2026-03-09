@@ -4,6 +4,7 @@ import type { Site } from '../../../../domain/entities/work-order.entity';
 import type { Material } from '../../../../domain/entities/material.entity';
 import type { SiteFile } from '../../../../domain/entities/site-file.entity';
 import type { TerminSubmission } from '../../../../domain/entities/termin-submission.entity';
+import type { SiteTeamMember } from '../../../../domain/entities/team.entity';
 import AgGridSolid from 'ag-grid-solid';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
@@ -12,12 +13,16 @@ import { MaterialRepositoryImpl } from '../../../../infrastructure/repositories/
 import { GetMaterialsBySiteInteractor } from '../../../../application/use-cases/get-materials-by-site.use-case';
 import { SiteRepositoryImpl } from '../../../../infrastructure/repositories/site.repository.impl';
 import { GetSiteFilesInteractor } from '../../../../application/use-cases/get-site-files.use-case';
+import { GetSiteTeamStructureInteractor } from '../../../../application/use-cases/get-site-team-structure.use-case';
+import { AddTeamToSiteInteractor } from '../../../../application/use-cases/add-team-to-site.use-case';
+import { DeleteTeamFromSiteInteractor } from '../../../../application/use-cases/delete-team-from-site.use-case';
 import { TerminRepositoryImpl } from '../../../../infrastructure/repositories/termin.repository.impl';
 import TerminSubmissionPage from './TerminSubmissionPage';
 import TerminDetailPage from './TerminDetailPage';
 import TerminReviewPage from './TerminReviewPage';
 import TerminPaymentPage from './TerminPaymentPage';
 import CreateMaterialModal from './components/CreateMaterialModal';
+import AddTeamModal from './components/AddTeamModal';
 
 interface SiteDetailPageProps {
     site: Site;
@@ -152,10 +157,11 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     };
 
     // Mock data for team
-    const [teamMembers] = createSignal([
-        { no: 1, name: 'Jane Smith', role: 'member', vendor: 'Vendor A', no_hp: '08XX1234567', jabatan: 'Staff' },
-        { no: 2, name: 'Bob Johnson', role: 'member', vendor: 'Vendor D', no_hp: '08XX7891234', jabatan: 'Supervisor' },
-    ]);
+    const [teamMembers, setTeamMembers] = createSignal<SiteTeamMember[]>([]);
+    const [loadingTeamMembers, setLoadingTeamMembers] = createSignal(false);
+    const [showAddTeamModal, setShowAddTeamModal] = createSignal(false);
+    const [deleteTeamTarget, setDeleteTeamTarget] = createSignal<{ id: string; name: string } | null>(null);
+    const [deletingTeam, setDeletingTeam] = createSignal(false);
 
     // Materials data from API
     const [materials, setMaterials] = createSignal<Material[]>([]);
@@ -171,6 +177,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
         loadMaterials();
         loadSiteFiles();
         loadAllTerminStatuses();
+        loadTeamMembers();
     });
 
     // Load all termin statuses for display
@@ -222,6 +229,63 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
             console.error('Failed to load site files:', error);
         } finally {
             setLoadingSiteFiles(false);
+        }
+    };
+
+    const loadTeamMembers = async () => {
+        try {
+            setLoadingTeamMembers(true);
+            const siteId = props.site.id; // Use full ID with prefix
+            const siteRepository = new SiteRepositoryImpl();
+            const getTeamStructureUseCase = new GetSiteTeamStructureInteractor(siteRepository);
+            const teamData = await getTeamStructureUseCase.execute(siteId);
+            setTeamMembers(teamData);
+        } catch (error) {
+            console.error('Failed to load team members:', error);
+        } finally {
+            setLoadingTeamMembers(false);
+        }
+    };
+
+    const handleAddTeam = async (teamId: string) => {
+        try {
+            const siteId = props.site.id; // Use full ID with prefix
+            const siteRepository = new SiteRepositoryImpl();
+            const addTeamUseCase = new AddTeamToSiteInteractor(siteRepository);
+            await addTeamUseCase.execute(siteId, { team_master_id: teamId });
+
+            // Reload team members
+            await loadTeamMembers();
+            console.log('Team member berhasil ditambahkan!');
+        } catch (error) {
+            console.error('Failed to add team:', error);
+            throw error;
+        }
+    };
+
+    const handleDeleteTeam = (teamMemberId: string, teamMemberName: string) => {
+        setDeleteTeamTarget({ id: teamMemberId, name: teamMemberName });
+    };
+
+    const confirmDeleteTeam = async () => {
+        const target = deleteTeamTarget();
+        if (!target) return;
+
+        try {
+            setDeletingTeam(true);
+            const siteId = props.site.id; // Use full ID with prefix
+            const siteRepository = new SiteRepositoryImpl();
+            const deleteTeamUseCase = new DeleteTeamFromSiteInteractor(siteRepository);
+            await deleteTeamUseCase.execute(siteId, target.id);
+
+            // Reload team members
+            await loadTeamMembers();
+            setDeleteTeamTarget(null);
+            console.log('Team member berhasil dihapus!');
+        } catch (error) {
+            console.error('Failed to delete team:', error);
+        } finally {
+            setDeletingTeam(false);
         }
     };
 
@@ -301,12 +365,41 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
 
     // Column definitions for Team table
     const teamColumns: ColDef[] = [
-        { field: 'no', headerName: 'No', width: 80 },
-        { field: 'name', headerName: 'Name', flex: 1 },
-        { field: 'role', headerName: 'Role', flex: 1 },
-        { field: 'vendor', headerName: 'Vendor', flex: 1 },
-        { field: 'no_hp', headerName: 'No HP', flex: 1 },
+        {
+            headerName: 'No',
+            width: 80,
+            valueGetter: (params) => {
+                return params.node?.rowIndex != null ? params.node.rowIndex + 1 : 0;
+            }
+        },
+        { field: 'nama', headerName: 'Name', flex: 1 },
+        { field: 'nik', headerName: 'NIK', width: 120 },
         { field: 'jabatan', headerName: 'Jabatan', flex: 1 },
+        { field: 'regional', headerName: 'Regional', flex: 1 },
+        { field: 'no_hp', headerName: 'No HP', flex: 1 },
+        {
+            headerName: 'Actions',
+            width: 100,
+            sortable: false,
+            filter: false,
+            cellRenderer: (params: any) => {
+                const member = params.data as SiteTeamMember;
+                const container = document.createElement('div');
+                container.className = 'flex items-center gap-2 h-full justify-center';
+
+                // Only show delete button if user can edit
+                if (!isReadOnly()) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all border border-slate-100';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>';
+                    deleteBtn.onclick = () => handleDeleteTeam(member.id, member.nama);
+                    container.appendChild(deleteBtn);
+                }
+
+                return container;
+            }
+        }
     ];
 
     // Column definitions for Materials table
@@ -778,21 +871,26 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center">
                         <h3 class="text-lg font-bold text-slate-900">Tim (Struktur)</h3>
                         <button
+                            onClick={() => setShowAddTeamModal(true)}
                             disabled={isReadOnly()}
                             class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
                         >
                             + Add Team
                         </button>
                     </div>
-                    <div class="ag-theme-alpine" style={{ height: '300px', width: '100%' }}>
-                        <AgGridSolid
-                            columnDefs={teamColumns}
-                            rowData={teamMembers()}
-                            pagination={true}
-                            paginationPageSize={10}
-                            paginationPageSizeSelector={[10, 20, 50]}
-                        />
-                    </div>
+                    {loadingTeamMembers() ? (
+                        <div class="p-8 text-center text-slate-500">Loading team members...</div>
+                    ) : (
+                        <div class="ag-theme-alpine" style={{ height: '300px', width: '100%' }}>
+                            <AgGridSolid
+                                columnDefs={teamColumns}
+                                rowData={teamMembers()}
+                                pagination={true}
+                                paginationPageSize={10}
+                                paginationPageSizeSelector={[10, 20, 50]}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Materials */}
@@ -865,6 +963,55 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                 defaultProjectId={props.site.project_id || ''}
                 defaultSiteId={props.site.id}
             />
+
+            {/* Add Team Modal */}
+            <AddTeamModal
+                show={showAddTeamModal()}
+                onClose={() => setShowAddTeamModal(false)}
+                onAdd={handleAddTeam}
+            />
+
+            {/* Delete Team Confirmation Modal */}
+            <Show when={deleteTeamTarget()}>
+                <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-slate-200 animate-in zoom-in-95 duration-200">
+                        <div class="flex flex-col items-center text-center gap-5">
+                            <div class="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center border border-red-100">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                    <line x1="10" y1="11" x2="10" y2="17" />
+                                    <line x1="14" y1="11" x2="14" y2="17" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900">Hapus Team Member</h3>
+                                <p class="text-slate-500 mt-2 text-sm leading-relaxed">
+                                    Apakah Anda yakin ingin menghapus <strong class="text-slate-800">"{deleteTeamTarget()?.name}"</strong> dari team site ini?
+                                </p>
+                            </div>
+                            <div class="flex gap-3 w-full mt-2">
+                                <button
+                                    onClick={() => setDeleteTeamTarget(null)}
+                                    disabled={deletingTeam()}
+                                    class="flex-1 py-3.5 px-6 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all text-sm disabled:opacity-50"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={confirmDeleteTeam}
+                                    disabled={deletingTeam()}
+                                    class="flex-1 py-3.5 px-6 rounded-2xl font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 text-sm flex items-center justify-center gap-2 disabled:opacity-70"
+                                >
+                                    <Show when={deletingTeam()}>
+                                        <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    </Show>
+                                    {deletingTeam() ? 'Menghapus...' : 'Hapus'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Show>
         </Show>
     );
 };

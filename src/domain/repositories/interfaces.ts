@@ -1,5 +1,5 @@
 import type { WorkOrder, WOStatus, Site, CreateSiteRequest } from "../entities/work-order.entity";
-import type { Team, Personnel } from "../entities/team.entity";
+import type { Team, SiteTeamMember, AddTeamToSiteRequest } from "../entities/team.entity";
 import type { Termin, PaymentStatus } from "../entities/payment.entity";
 import type { MaterialTransaction, Material, CreateMaterialRequest } from "../entities/material.entity";
 
@@ -33,6 +33,9 @@ export interface SiteRepository {
     findByProjectId(projectId: string): Promise<Site[]>;
     findAll(): Promise<Site[]>;
     getFiles(siteId: string): Promise<SiteFile[]>;
+    getTeamStructure(siteId: string): Promise<SiteTeamMember[]>;
+    addTeamToSite(siteId: string, request: AddTeamToSiteRequest): Promise<SiteTeamMember>;
+    deleteTeamFromSite(siteId: string, teamMemberId: string): Promise<void>;
 }
 
 export interface PeopleRepository {
@@ -59,7 +62,6 @@ export interface TeamRepository {
     findById(id: string): Promise<Team | null>;
     findAll(): Promise<Team[]>;
     save(team: Team): Promise<void>;
-    addPersonnel(teamId: string, personnel: Personnel): Promise<void>;
 }
 
 export interface PaymentRepository {
