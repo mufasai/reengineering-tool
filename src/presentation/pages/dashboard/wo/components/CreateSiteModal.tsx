@@ -43,17 +43,18 @@ const CreateSiteModal: Component<CreateSiteModalProps> = (props) => {
     const handleSave = () => {
         const newSite: Site = {
             id: Math.random().toString(36).substr(2, 9),
-            siteName: siteName(),
-            siteInfo: siteInfo(),
+            site_name: siteName(),
+            site_info: siteInfo(),
             pekerjaan: pekerjaan(),
             lokasi: lokasi(),
-            nomorKontrak: nomorKontrak(),
+            nomor_kontrak: nomorKontrak(),
             start: new Date(startDate()),
             end: new Date(endDate()),
-            maximalBudget: maximalBudget(),
-            costEstimated: costEstimated(),
-            pemberiTugas: pemberiTugas(),
-            penerimaTugas: penerimaTugas(),
+            maximal_budget: maximalBudget(),
+            cost_estimated: costEstimated(),
+            pemberi_tugas: pemberiTugas(),
+            penerima_tugas: penerimaTugas(),
+            site_document: null,
             team: team()
         };
         props.onSave(newSite);

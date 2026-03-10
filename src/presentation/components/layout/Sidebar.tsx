@@ -13,8 +13,8 @@ const WorkOrderIcon = (props: { class?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
 );
 
-const FolderIcon = (props: { class?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" /></svg>
+const DatabaseIcon = (props: { class?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5V19A9 3 0 0 0 21 19V5" /><path d="M3 12A9 3 0 0 0 21 12" /></svg>
 );
 
 const UsersIcon = (props: { class?: string }) => (
@@ -69,54 +69,48 @@ const Sidebar: Component<SidebarProps> = (props) => {
         }).length;
     };
 
-    // 1. PROJECT MANAGEMENT ITEMS
-    const projectManagementItems = () => {
-        const items = [{ icon: DashboardIcon, label: 'Dashboard', id: 'DASHBOARD' }];
-        const role = user()?.role || '';
+    const hasPermission = (perm: string) => {
+        const role = user()?.role?.toLowerCase().replace(/_/g, ' ') || '';
+        const rolePermissions: Record<string, string[]> = {
+            'engineer': ['dashboard'],
+            'team leader': ['dashboard', 'site-master'],
+            'backoffice admin': ['dashboard', 'site-master', 'people', 'teams'],
+            'finance': ['dashboard', 'site-master'],
+            'management': ['dashboard', 'site-master', 'people', 'teams', 'options'],
+            // Fallbacks for previous roles
+            'admin': ['dashboard', 'site-master', 'people', 'teams', 'options'],
+            'head office': ['dashboard', 'site-master'],
+            'direktur': ['dashboard', 'site-master'],
+        };
+        const perms = rolePermissions[role] || ['dashboard'];
+        return perms.includes(perm);
+    };
 
-        // Backend sends roles in lowercase with spaces: "backoffice admin", "team leader", "head office"
-        console.log('Current user role:', role);
-
-        if (['backoffice admin', 'management', 'team leader', 'admin'].includes(role)) {
+    // 1. PEKERJAAN ITEMS
+    const pekerjaanItems = () => {
+        const items: any[] = [];
+        if (hasPermission('site-master')) {
+            items.push({ icon: DatabaseIcon, label: 'Semua Sites', id: 'PROJECTS', count: projects().length });
             items.push({ icon: WorkOrderIcon, label: 'Work Orders', id: 'WO' });
-        }
-
-        items.push({ icon: FileTextIcon, label: 'SPK', id: 'SPK' });
-
-        // All Projects menu - includes team leader, head office, direktur, finance
-        const projectAllowedRoles = ['backoffice admin', 'finance', 'management', 'admin', 'team leader', 'head office', 'direktur'];
-
-        if (projectAllowedRoles.includes(role)) {
-            items.push({ icon: FolderIcon, label: 'All Projects', id: 'PROJECTS' });
-        }
-
-        // Add Termin menu for Finance, Head Office, Director, and Team Leader
-        const terminAllowedRoles = ['finance', 'head office', 'backoffice admin', 'management', 'direktur', 'team leader'];
-
-        if (terminAllowedRoles.includes(role)) {
+            items.push({ icon: FileTextIcon, label: 'SPK', id: 'SPK' });
             items.push({ icon: ReceiptIcon, label: 'Termin', id: 'TERMIN' });
         }
-
         return items;
     };
 
-    // 2. DATA MASTER ITEMS
-    const dataMasterItems = [
-        { icon: UsersIcon, label: 'People', id: 'PEOPLE' },
-    ];
-
-    const teamsItem = { icon: UsersIcon, label: 'Teams', id: 'TEAMS' };
-
-    const canManageData = () => {
-        const role = user()?.role || '';
-        // Backend sends: "backoffice admin", "management", "admin" (lowercase with spaces)
-        return ['backoffice admin', 'management', 'admin'].includes(role);
-    };
-
-    const canAccessTeams = () => {
-        const role = user()?.role || '';
-        // Backend sends: "team leader", "admin" (lowercase with spaces)
-        return ['team leader', 'admin'].includes(role);
+    // 2. DATA & DOKUMEN ITEMS
+    const dataDokumenItems = () => {
+        const items: any[] = [];
+        if (hasPermission('site-master')) {
+            items.push({ icon: DatabaseIcon, label: 'Sites', id: 'SITES', badge: 1 });
+        }
+        if (hasPermission('people')) {
+            items.push({ icon: UsersIcon, label: 'People', id: 'PEOPLE' });
+        }
+        if (hasPermission('teams')) {
+            items.push({ icon: UsersIcon, label: 'Teams', id: 'TEAMS' });
+        }
+        return items;
     };
 
     // 3. PROJECT TYPES - Dynamic counts
@@ -169,107 +163,119 @@ const Sidebar: Component<SidebarProps> = (props) => {
                     </div>
                 </div>
 
-                {/* 1. PROJECT MANAGEMENT */}
-                <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-4 pb-[6px]">Project Management</p>
-                <div class="px-2 space-y-1">
-                    <For each={projectManagementItems()}>
-                        {(item) => (
-                            <button
-                                onClick={() => props.onTabChange(item.id)}
-                                class={`w-full flex items-center gap-3 px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === item.id
-                                    ? 'bg-navy-800 text-blue-400 font-semibold border-l-2 border-blue-500'
-                                    : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'
-                                    }`}
-                            >
-                                <item.icon class={`w-4 h-4 transition-colors ${props.activeTab === item.id ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
-                                <span>{item.label}</span>
-                            </button>
-                        )}
-                    </For>
-                </div>
 
-                {/* 2. PROJECT TYPES */}
-                <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">Project Types</p>
-                <div class="px-2 space-y-1">
-                    <For each={projectTypes()}>
-                        {(type) => {
-                            const role = user()?.role || '';
-                            // Backend sends: "team leader" (lowercase with space)
-                            const isRestricted = ['engineer', 'team leader'].includes(role);
-                            if (isRestricted && type.count === 0) return null;
-
-                            return (
-                                <button
-                                    onClick={() => props.onTabChange(type.id)}
-                                    class={`w-full flex items-center justify-between px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === type.id
-                                        ? 'bg-navy-800 text-white font-bold border-l-2 border-blue-600'
-                                        : 'text-slate-400 hover:text-white hover:bg-navy-800 border-l-2 border-transparent font-medium'
-                                        }`}
-                                >
-                                    <div class="flex items-center gap-3">
-                                        <div class={`w-2 h-2 rounded-full ${type.colorClass} ${props.activeTab === type.id && "ring-2 ring-white/20 shadow-[0_0_8px_currentColor]"}`}></div>
-                                        <span class="truncate">{type.label}</span>
-                                    </div>
-                                    <span class={`text-[10px] px-1.5 py-0.5 rounded border transition-all ${props.activeTab === type.id
-                                        ? "bg-blue-600/20 text-blue-400 border-blue-500/30 font-bold"
-                                        : type.count > 0
-                                            ? "bg-navy-700 text-white border-navy-600"
-                                            : "border-transparent text-slate-500"
-                                        }`}>
-                                        [{type.count}]
-                                    </span>
-                                </button>
-                            );
-                        }}
-                    </For>
-                </div>
-
-                {/* 3. DATA MASTER */}
-                <Show when={canManageData()}>
-                    <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">Data Master</p>
+                {/* OVERVIEW */}
+                <Show when={hasPermission('dashboard')}>
+                    <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-4 pb-[6px]">Overview</p>
                     <div class="px-2 space-y-1">
-                        <For each={dataMasterItems}>
+                        <button
+                            onClick={() => props.onTabChange('DASHBOARD')}
+                            class={`w-full flex items-center gap-3 px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === 'DASHBOARD'
+                                ? 'bg-navy-800 text-blue-400 font-semibold border-l-2 border-blue-500'
+                                : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'
+                                }`}
+                        >
+                            <DashboardIcon class={`w-4 h-4 transition-colors ${props.activeTab === 'DASHBOARD' ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
+                            <span>Dashboard</span>
+                        </button>
+                    </div>
+                </Show>
+
+                {/* 1. PEKERJAAN */}
+                <Show when={hasPermission('site-master')}>
+                    <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">Pekerjaan</p>
+                    <div class="px-2 space-y-1">
+                        <For each={pekerjaanItems()}>
                             {(item) => (
                                 <button
                                     onClick={() => props.onTabChange(item.id)}
-                                    class={`w-full flex items-center gap-3 px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === item.id
-                                        ? 'bg-navy-800 text-blue-400 font-semibold border-l-2 border-blue-500'
+                                    class={`w-full flex items-center justify-between px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === item.id
+                                        ? 'bg-navy-800 text-white font-bold border-l-2 border-blue-600'
                                         : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'
                                         }`}
                                 >
-                                    <item.icon class={`w-4 h-4 transition-colors ${props.activeTab === item.id ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
-                                    <span>{item.label}</span>
+                                    <div class="flex items-center gap-3">
+                                        <item.icon class={`w-4 h-4 transition-colors ${props.activeTab === item.id ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
+                                        <span>{item.label}</span>
+                                    </div>
+                                    <Show when={item.count !== undefined}>
+                                        <span class={`text-[10px] px-1.5 py-0.5 rounded border transition-all ${props.activeTab === item.id
+                                            ? "bg-blue-600/20 text-blue-400 border-blue-500/30 font-bold"
+                                            : item.count > 0
+                                                ? "bg-navy-700 text-white border-navy-600"
+                                                : "border-transparent text-slate-500"
+                                            }`}>
+                                            [{item.count}]
+                                        </span>
+                                    </Show>
+                                </button>
+                            )}
+                        </For>
+
+                        {/* Project Types appended directly under Pekerjaan */}
+                        <For each={projectTypes()}>
+                            {(type) => {
+                                const role = user()?.role?.toLowerCase().replace(/_/g, ' ') || '';
+                                const isRestricted = ['engineer', 'team leader'].includes(role);
+                                if (isRestricted && type.count === 0) return null;
+
+                                return (
+                                    <button
+                                        onClick={() => props.onTabChange(type.id)}
+                                        class={`w-full flex items-center justify-between px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === type.id
+                                            ? 'bg-navy-800 text-white font-bold border-l-2 border-blue-600'
+                                            : 'text-slate-400 hover:text-white hover:bg-navy-800 border-l-2 border-transparent font-medium'
+                                            }`}
+                                    >
+                                        <div class="flex items-center gap-3">
+                                            <div class={`w-2 h-2 rounded-full ${type.colorClass} ${props.activeTab === type.id && "ring-2 ring-white/20 shadow-[0_0_8px_currentColor]"}`}></div>
+                                            <span class="truncate">{type.label}</span>
+                                        </div>
+                                        <span class={`text-[10px] px-1.5 py-0.5 rounded border transition-all ${props.activeTab === type.id
+                                            ? "bg-blue-600/20 text-blue-400 border-blue-500/30 font-bold"
+                                            : type.count > 0
+                                                ? "bg-navy-700 text-white border-navy-600"
+                                                : "border-transparent text-slate-500"
+                                            }`}>
+                                            [{type.count}]
+                                        </span>
+                                    </button>
+                                );
+                            }}
+                        </For>
+                    </div>
+                </Show>
+
+                {/* 3. DATA & DOKUMEN */}
+                <Show when={dataDokumenItems().length > 0}>
+                    <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">Data & Dokumen</p>
+                    <div class="px-2 space-y-1">
+                        <For each={dataDokumenItems()}>
+                            {(item) => (
+                                <button
+                                    onClick={() => props.onTabChange(item.id)}
+                                    class={`w-full flex items-center justify-between px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === item.id
+                                        ? 'bg-navy-800 text-white font-bold border-l-2 border-blue-600'
+                                        : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'
+                                        }`}
+                                >
+                                    <div class="flex items-center gap-3">
+                                        <item.icon class={`w-4 h-4 transition-colors ${props.activeTab === item.id ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
+                                        <span>{item.label}</span>
+                                    </div>
+                                    <Show when={item.badge !== undefined}>
+                                        <span class="w-5 h-5 flex items-center justify-center bg-orange-500 text-white text-[10px] font-black rounded-full shadow-[0_0_8px_rgba(249,115,22,0.4)]">
+                                            {item.badge}
+                                        </span>
+                                    </Show>
                                 </button>
                             )}
                         </For>
                     </div>
                 </Show>
 
-                {/* Teams - Separate section for Team Leader and Admin */}
-                <Show when={canAccessTeams()}>
-                    <Show when={!canManageData()}>
-                        <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">Data Master</p>
-                    </Show>
-                    <div class="px-2 space-y-1">
-                        <button
-                            onClick={() => props.onTabChange(teamsItem.id)}
-                            class={`w-full flex items-center gap-3 px-4 py-2 text-[13px] rounded-lg mx-1 transition-all duration-150 group text-left ${props.activeTab === teamsItem.id
-                                ? 'bg-navy-800 text-blue-400 font-semibold border-l-2 border-blue-500'
-                                : 'text-slate-400 hover:text-white hover:bg-navy-800 font-medium border-l-2 border-transparent'
-                                }`}
-                        >
-                            <teamsItem.icon class={`w-4 h-4 transition-colors ${props.activeTab === teamsItem.id ? "text-blue-400" : "text-slate-400 group-hover:text-white"}`} />
-                            <span>{teamsItem.label}</span>
-                        </button>
-                    </div>
-                </Show>
-
                 {/* 4. SYSTEM */}
-                <Show when={() => {
-                    const role = user()?.role || '';
-                    // Backend sends: "management", "admin" (lowercase)
-                    return role === 'management' || role === 'admin';
-                }}>
+                <Show when={hasPermission('options')}>
                     <p class="text-slate-500 text-[10px] font-bold tracking-[0.1em] uppercase px-6 pt-6 pb-[6px]">System</p>
                     <div class="px-2 space-y-1 pb-10">
                         <button
