@@ -6,6 +6,7 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { type ProjectType } from '../data/mockData';
 import BulkStageUpdateModal from '../../../components/modals/BulkStageUpdateModal';
+import CreateSiteModal from './components/CreateSiteModal';
 import { GetAllSitesInteractor } from '../../../../application/use-cases/get-all-sites.use-case';
 import { siteRepository } from '../../../../infrastructure/repositories/site.repository.impl';
 
@@ -50,6 +51,7 @@ interface AllSitesPageProps {
 
 const AllSitesPage: Component<AllSitesPageProps> = (props) => {
     const [isBulkOpen, setIsBulkOpen] = createSignal(false);
+    const [isCreateOpen, setIsCreateOpen] = createSignal(false);
 
     // Filters
     const [searchTerm, setSearchTerm] = createSignal('');
@@ -58,7 +60,7 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
     const [filterCluster, setFilterCluster] = createSignal<string>('All');
     const [filterTeam, setFilterTeam] = createSignal<string>('All');
 
-    const [sites] = createResource(() => getAllSites.execute());
+    const [sites, { refetch }] = createResource(() => getAllSites.execute());
 
     // Derived distinct values for dropdowns
     const availableStages = createMemo(() => {
@@ -314,10 +316,16 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
                     <h1 class="text-2xl font-bold text-[var(--text-primary)]">Semua Sites</h1>
                     <p class="text-[var(--text-secondary)] mt-1">Progress seluruh site lintas tipe pekerjaan</p>
                 </div>
-                <button onClick={() => setIsBulkOpen(true)} class="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2">
-                    <FileSpreadsheetIcon class="w-4 h-4 text-blue-600" />
-                    Bulk Update Stage
-                </button>
+                <div class="flex items-center gap-3">
+                    <button onClick={() => setIsCreateOpen(true)} class="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg text-sm transition-all shadow-md shadow-blue-500/10 flex items-center gap-2 hover:bg-blue-700 active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14" /></svg>
+                        Create New Site
+                    </button>
+                    <button onClick={() => setIsBulkOpen(true)} class="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2">
+                        <FileSpreadsheetIcon class="w-4 h-4 text-blue-600" />
+                        Bulk Update Stage
+                    </button>
+                </div>
             </div>
 
             {/* Summary Strip */}
@@ -416,6 +424,16 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
                 isOpen={isBulkOpen()}
                 onClose={() => setIsBulkOpen(false)}
             />
+
+            <Show when={isCreateOpen()}>
+                <CreateSiteModal
+                    onSuccess={() => {
+                        refetch();
+                        setIsCreateOpen(false);
+                    }}
+                    onCancel={() => setIsCreateOpen(false)}
+                />
+            </Show>
         </div>
     );
 };

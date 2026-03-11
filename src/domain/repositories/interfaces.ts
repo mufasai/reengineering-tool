@@ -11,7 +11,8 @@ import type { Person, CreatePersonRequest } from "../entities/person.entity";
 
 import type { ProjectFile, UploadProjectFileRequest } from "../entities/project-file.entity";
 
-import type { SiteFile } from "../entities/site-file.entity";
+import type { SiteFile, UploadSiteFileRequest } from "../entities/site-file.entity";
+import type { SiteEvidence, UploadSiteEvidenceRequest } from "../entities/site-evidence.entity";
 
 import type { CreateTerminRequest, TerminSubmission, ReviewTerminRequest, ApproveTerminRequest, PayTerminRequest } from "../entities/termin-submission.entity";
 
@@ -28,11 +29,16 @@ export interface ProjectRepository {
     importFromExcel(request: ImportProjectRequest): Promise<ImportProjectResponse>;
 }
 
+
 export interface SiteRepository {
     create(site: CreateSiteRequest): Promise<Site>;
     findByProjectId(projectId: string): Promise<Site[]>;
     findAll(): Promise<Site[]>;
+    findById(id: string): Promise<Site>;
     getFiles(siteId: string): Promise<SiteFile[]>;
+    uploadFile(siteId: string, request: UploadSiteFileRequest): Promise<SiteFile>;
+    getEvidence(siteId: string): Promise<SiteEvidence[]>;
+    uploadEvidence(siteId: string, request: UploadSiteEvidenceRequest): Promise<SiteEvidence>;
     getTeamStructure(siteId: string): Promise<SiteTeamMember[]>;
     addTeamToSite(siteId: string, request: AddTeamToSiteRequest): Promise<SiteTeamMember>;
     deleteTeamFromSite(siteId: string, teamMemberId: string): Promise<void>;

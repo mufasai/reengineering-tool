@@ -15,3 +15,20 @@ export interface SiteFile {
     created_at: string;
     updated_at: string;
 }
+
+export interface SiteFilesApiResponse {
+    success: boolean;
+    data: SiteFile[];
+    message: string | null;
+}
+
+export interface UploadSiteFileRequest {
+    file: File;
+    title: string;
+}
+
+export interface UploadSiteFileResponse {
+    success: boolean;
+    data: SiteFile;
+    message: string;
+}

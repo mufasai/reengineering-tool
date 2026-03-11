@@ -25,6 +25,8 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                     site_info: 'Information about Alpha',
                     pekerjaan: 'Installation',
                     lokasi: 'Jakarta',
+                    latitude: -6.2,
+                    longitude: 106.8,
                     nomor_kontrak: 'K-001',
                     start: new Date(),
                     end: new Date(),
@@ -33,7 +35,15 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                     pemberi_tugas: 'Telco A',
                     penerima_tugas: 'Smartelco',
                     site_document: null,
-                    team: []
+                    stage: 'assigned',
+                    stage_updated_at: new Date().toISOString(),
+                    stage_notes: null,
+                    impl_cico_done: false,
+                    impl_rfs_done: false,
+                    impl_dokumen_done: false,
+                    ineom_registered: false,
+                    team: [],
+                    project_id: 'P1'
                 },
                 {
                     id: 'S2',
@@ -41,6 +51,8 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                     site_info: 'Information about Bravo',
                     pekerjaan: 'Maintenance',
                     lokasi: 'Surabaya',
+                    latitude: -7.2,
+                    longitude: 112.7,
                     nomor_kontrak: 'K-002',
                     start: new Date(),
                     end: new Date(),
@@ -49,7 +61,15 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                     pemberi_tugas: 'Telco B',
                     penerima_tugas: 'Smartelco',
                     site_document: null,
-                    team: []
+                    stage: 'permit_process',
+                    stage_updated_at: new Date().toISOString(),
+                    stage_notes: null,
+                    impl_cico_done: false,
+                    impl_rfs_done: false,
+                    impl_dokumen_done: false,
+                    ineom_registered: false,
+                    team: [],
+                    project_id: 'P2'
                 },
                 {
                     id: 'S3',
@@ -57,6 +77,8 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                     site_info: 'Information about Charlie',
                     pekerjaan: 'Survey',
                     lokasi: 'Bandung',
+                    latitude: -6.9,
+                    longitude: 107.6,
                     nomor_kontrak: 'K-003',
                     start: new Date(),
                     end: new Date(),
@@ -65,7 +87,15 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                     pemberi_tugas: 'Telco C',
                     penerima_tugas: 'Smartelco',
                     site_document: null,
-                    team: []
+                    stage: 'imported',
+                    stage_updated_at: new Date().toISOString(),
+                    stage_notes: null,
+                    impl_cico_done: false,
+                    impl_rfs_done: false,
+                    impl_dokumen_done: false,
+                    ineom_registered: false,
+                    team: [],
+                    project_id: 'P3'
                 },
             ];
             setSites(mockSites);

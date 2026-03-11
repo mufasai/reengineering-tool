@@ -423,7 +423,7 @@ const HomePage: Component<HomePageProps> = (props) => {
                                 <div class="absolute inset-0 bg-red-100/50 animate-pulse mix-blend-multiply pointer-events-none"></div>
                             </Show>
                             <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1 flex items-center gap-1 relative z-10 pointer-events-none group-hover:underline">
-                                Issue ⚡
+                                Issue
                             </span>
                             <span class="text-lg font-bold text-amber-700 relative z-10 pointer-events-none">{stageSummary().issues}</span>
                         </div>
