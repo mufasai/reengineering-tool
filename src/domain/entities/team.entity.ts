@@ -17,6 +17,20 @@ export interface Team {
     updated_at: string;
 }
 
+export interface Personnel {
+    id: string;
+    name: string;
+    ktpNumber: string;
+    email: string;
+    phoneNumber: string;
+    role: string;
+    verificationPhotos: {
+        ktp: string;
+        selfie: string;
+        nda: string;
+    };
+}
+
 // Site Team Member (from team structure API)
 export interface SiteTeamMember {
     id: string;

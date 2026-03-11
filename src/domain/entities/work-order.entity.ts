@@ -11,6 +11,8 @@ export interface Site {
     site_info: string;
     pekerjaan: string;
     lokasi: string;
+    latitude: number | null;
+    longitude: number | null;
     nomor_kontrak: string;
     start: string | Date;
     end: string | Date;
@@ -19,6 +21,13 @@ export interface Site {
     pemberi_tugas: string;
     penerima_tugas: string;
     site_document: string | null;
+    stage: string;
+    stage_updated_at: string;
+    stage_notes: string | null;
+    impl_cico_done: boolean;
+    impl_rfs_done: boolean;
+    impl_dokumen_done: boolean;
+    ineom_registered: boolean;
     team?: Personnel[]; // Using Personnel from team.entity.ts
     created_at?: string;
     updated_at?: string;

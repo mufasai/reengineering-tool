@@ -186,12 +186,12 @@ const CreateWorkOrderForm: Component<CreateWorkOrderFormProps> = (props) => {
                                 {(site) => (
                                     <div class="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 group hover:border-blue-500/30 transition-all shadow-sm">
                                         <div>
-                                            <p class="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{site.siteName}</p>
+                                            <p class="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{site.site_name}</p>
                                             <p class="text-[10px] text-slate-400 uppercase font-bold mt-0.5">{site.lokasi} • {site.pekerjaan}</p>
                                         </div>
                                         <div class="flex items-center gap-4">
                                             <div class="px-3 py-1 bg-slate-50 rounded-lg border border-slate-100">
-                                                <span class="text-[9px] font-bold text-slate-500 uppercase">{site.team.length} Team Members</span>
+                                                <span class="text-[9px] font-bold text-slate-500 uppercase">{site.team?.length || 0} Team Members</span>
                                             </div>
                                             <button class="text-slate-300 hover:text-red-500 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>

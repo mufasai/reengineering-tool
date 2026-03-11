@@ -1,45 +1,80 @@
 import { apiClient } from "../api/api-client";
 import type { SiteRepository } from "../../domain/repositories/interfaces";
-import type { Site, CreateSiteRequest, SiteApiResponse, SitesListApiResponse } from "../../domain/entities/work-order.entity";
-import type { SiteFile } from "../../domain/entities/site-file.entity";
+import type { Site, CreateSiteRequest } from "../../domain/entities/work-order.entity";
+import type { ApiResponse } from "../../domain/entities/project.entity";
+import type { SiteFile, UploadSiteFileRequest, SiteFilesApiResponse, UploadSiteFileResponse } from "../../domain/entities/site-file.entity";
+import type { SiteEvidence, UploadSiteEvidenceRequest, SiteEvidenceApiResponse, CreateEvidenceApiResponse } from "../../domain/entities/site-evidence.entity";
 import type { SiteTeamMember, AddTeamToSiteRequest } from "../../domain/entities/team.entity";
 
 export class SiteRepositoryImpl implements SiteRepository {
     async create(site: CreateSiteRequest): Promise<Site> {
-        const response = await apiClient.post<SiteApiResponse>('/api/sites', site);
+        const response = await apiClient.post<ApiResponse<Site>>('/api/sites', site);
         return response.data;
     }
 
     async findByProjectId(projectId: string): Promise<Site[]> {
-        const response = await apiClient.get<SitesListApiResponse>(`/api/sites/project/${projectId}`);
+        const response = await apiClient.get<ApiResponse<Site[]>>(`/api/projects/${projectId}/sites`);
         return response.data;
     }
 
     async findAll(): Promise<Site[]> {
-        const response = await apiClient.get<SitesListApiResponse>('/api/sites');
+        const response = await apiClient.get<ApiResponse<Site[]>>('/api/sites');
+        return response.data;
+    }
+
+    async findById(id: string): Promise<Site> {
+        const response = await apiClient.get<ApiResponse<Site>>(`/api/sites/${id}`);
         return response.data;
     }
 
     async getFiles(siteId: string): Promise<SiteFile[]> {
-        const response = await apiClient.get<{ success: boolean; data: SiteFile[] }>(`/api/sites/${siteId}/files`);
+        const response = await apiClient.get<SiteFilesApiResponse>(`/api/sites/${siteId}/files`);
         return response.data;
     }
 
-    async getTeamStructure(siteId: string): Promise<SiteTeamMember[]> {
-        const response = await apiClient.get<{ success: boolean; data: SiteTeamMember[] }>(`/api/sites/${siteId}/team-structure`);
-        return response.data;
-    }
+    async uploadFile(siteId: string, request: UploadSiteFileRequest): Promise<SiteFile> {
+        const formData = new FormData();
+        formData.append('file', request.file);
+        formData.append('title', request.title);
 
-    async addTeamToSite(siteId: string, request: AddTeamToSiteRequest): Promise<SiteTeamMember> {
-        const response = await apiClient.post<{ success: boolean; data: SiteTeamMember; message: string }>(
-            `/api/sites/${siteId}/team-structure`,
-            request
+        const response = await apiClient.postFormData<UploadSiteFileResponse>(
+            `/api/sites/${siteId}/upload`,
+            formData
         );
         return response.data;
     }
 
+    async getEvidence(siteId: string): Promise<SiteEvidence[]> {
+        const response = await apiClient.get<SiteEvidenceApiResponse>(`/api/sites/${siteId}/evidence`);
+        return response.data;
+    }
+
+    async uploadEvidence(siteId: string, request: UploadSiteEvidenceRequest): Promise<SiteEvidence> {
+        const formData = new FormData();
+        formData.append('file', request.file);
+        formData.append('progress_tag', request.progress_tag);
+        if (request.stage_context) {
+            formData.append('stage_context', request.stage_context);
+        }
+        formData.append('uploaded_by', request.uploaded_by);
+
+        const response = await apiClient.postFormData<CreateEvidenceApiResponse>(`/api/sites/${siteId}/evidence`, formData);
+        return response.data;
+    }
+
+    async getTeamStructure(siteId: string): Promise<SiteTeamMember[]> {
+        const response = await apiClient.get<ApiResponse<SiteTeamMember[]>>(`/api/sites/${siteId}/teams`);
+        return response.data;
+    }
+
+    async addTeamToSite(siteId: string, request: AddTeamToSiteRequest): Promise<SiteTeamMember> {
+        const response = await apiClient.post<ApiResponse<SiteTeamMember>>(`/api/sites/${siteId}/teams`, request);
+        return response.data;
+    }
+
     async deleteTeamFromSite(siteId: string, teamMemberId: string): Promise<void> {
-        await apiClient.delete(`/api/sites/${siteId}/team-structure/${teamMemberId}`);
+        const rawTeamId = teamMemberId.includes(':') ? teamMemberId.split(':').pop()! : teamMemberId;
+        await apiClient.delete(`/api/sites/${siteId}/teams/${rawTeamId}`);
     }
 }
 
