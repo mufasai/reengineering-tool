@@ -1,6 +1,22 @@
 export type ProjectType = 'COMBAT' | 'L2H' | 'BLACKSITE' | 'REFINEN' | 'FILTER' | 'BEBAN_OPERASIONAL';
 export type SiteStage = 'imported' | 'assigned' | 'permit_process' | 'permit_ready' | 'akses_process' | 'akses_ready' | 'implementasi' | 'rfi_done' | 'rfs_done' | 'dokumen_done' | 'bast' | 'invoice' | 'completed' | 'issue_hold';
 
+export const STAGE_ORDER: SiteStage[] = [
+    'imported',
+    'assigned',
+    'permit_process',
+    'permit_ready',
+    'akses_process',
+    'akses_ready',
+    'implementasi',
+    'rfi_done',
+    'rfs_done',
+    'dokumen_done',
+    'bast',
+    'invoice',
+    'completed'
+];
+
 export interface Project {
     id: string;
     name: string;

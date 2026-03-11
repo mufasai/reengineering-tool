@@ -1,11 +1,15 @@
-import { createSignal, createMemo, For, Show } from 'solid-js';
+import { createSignal, createMemo, For, Show, createResource } from 'solid-js';
 import type { Component } from 'solid-js';
 const clsx = (...classes: any[]) => classes.flat().filter(Boolean).join(' ');
 import AgGridSolid from 'ag-grid-solid';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { siteMasterRecords, type ProjectType } from '../data/mockData';
+import { type ProjectType } from '../data/mockData';
 import BulkStageUpdateModal from '../../../components/modals/BulkStageUpdateModal';
+import { GetAllSitesInteractor } from '../../../../application/use-cases/get-all-sites.use-case';
+import { siteRepository } from '../../../../infrastructure/repositories/site.repository.impl';
+
+const getAllSites = new GetAllSitesInteractor(siteRepository);
 
 const SearchIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>;
 const FilterIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>;
@@ -54,15 +58,28 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
     const [filterCluster, setFilterCluster] = createSignal<string>('All');
     const [filterTeam, setFilterTeam] = createSignal<string>('All');
 
+    const [sites] = createResource(() => getAllSites.execute());
+
     // Derived distinct values for dropdowns
-    const availableStages = createMemo(() => Array.from(new Set(siteMasterRecords.map((s: any) => s.stage))));
-    const availableClusters = createMemo(() => Array.from(new Set(siteMasterRecords.map((s: any) => s.cluster).filter(Boolean))));
-    const availableTeams = createMemo(() => Array.from(new Set(siteMasterRecords.map((s: any) => s.team_assigned).filter(Boolean))));
+    const availableStages = createMemo(() => {
+        const data = sites() || [];
+        return Array.from(new Set(data.map((s: any) => s.stage)));
+    });
+    const availableClusters = createMemo(() => {
+        const data = sites() || [];
+        return Array.from(new Set(data.map((s: any) => (s as any).cluster).filter(Boolean)));
+    });
+    const availableTeams = createMemo(() => {
+        const data = sites() || [];
+        return Array.from(new Set(data.map((s: any) => (s as any).team_assigned).filter(Boolean)));
+    });
 
     // Filter Logic
     const filteredSites = createMemo(() => {
-        return siteMasterRecords.filter((site: any) => {
-            if (filterType() !== 'All' && site.project_type !== filterType()) return false;
+        const data = sites() || [];
+        return data.filter((site: any) => {
+
+            if (filterType() !== 'All' && (site.project_type || site.project_id) !== filterType()) return false;
             if (filterStage() !== 'All' && site.stage !== filterStage()) return false;
             if (filterCluster() !== 'All' && (site as any).cluster !== filterCluster()) return false;
             if (filterTeam() !== 'All' && (site as any).team_assigned !== filterTeam()) return false;
@@ -97,10 +114,12 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
         let combat = 0;
         let actions = 0;
         let others = 0;
+        const data = sites() || [];
 
-        siteMasterRecords.forEach((s: any) => {
-            if (s.project_type === 'FILTER') filter++;
-            else if (s.project_type === 'COMBAT') combat++;
+        data.forEach((s: any) => {
+            const type = s.project_type || s.project_id;
+            if (type === 'FILTER' || (type && type.includes('FILTER'))) filter++;
+            else if (type === 'COMBAT' || (type && type.includes('COMBAT'))) combat++;
             else others++;
 
             if (s.stage !== 'imported' && (s as any).stage_updated_at) {
@@ -111,7 +130,7 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
             }
         });
 
-        return { total: siteMasterRecords.length, filter, combat, others, actions };
+        return { total: data.length, filter, combat, others, actions };
     });
 
     const resetFilters = () => {
@@ -123,12 +142,24 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
     };
 
     const columnDefs = [
-        {
-            field: 'site_id',
-            headerName: 'SITE_ID',
-            width: 120,
-            cellRenderer: (params: any) => <span class="font-mono font-bold text-slate-700">{params.value || '—'}</span>
-        },
+        // {
+        //     field: 'site_id',
+        //     headerName: 'SITE_ID',
+        //     width: 120,
+        //     valueGetter: (params: any) => {
+        //         const data = params.data;
+        //         if (!data) return '—';
+        //         if (data.id && data.id.startsWith('sites:')) {
+        //             // Extract ID part if it follows the sites:ID format
+        //             const parts = data.id.split(':');
+        //             if (parts.length > 1 && parts[1].length > 5) return parts[1].toUpperCase();
+        //         }
+
+        //         // Fallbacks as requested
+        //         return data.site_id || data.nomor_kontrak || data.site_name || '—';
+        //     },
+        //     cellRenderer: (params: any) => <span class="font-mono font-bold text-slate-700">{params.value || '—'}</span>
+        // },
         {
             field: 'site_name',
             headerName: 'Site Name',
@@ -140,8 +171,12 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
             field: 'project_type',
             headerName: 'Type',
             width: 120,
+            valueGetter: (params: any) => params.data.project_type || params.data.project_id || params.data.pekerjaan || '—',
             cellRenderer: (params: any) => {
-                const typeObj = PROJECT_TYPES.find(t => t.id === params.value);
+                const rawValue = (params.value || '').toString();
+                let typeId: string = rawValue;
+
+                const typeObj = PROJECT_TYPES.find(t => t.id === typeId || typeId.includes(t.id));
                 return typeObj ? (
                     <div class="flex items-center justify-start h-full py-2">
                         <span class={clsx(
@@ -154,8 +189,20 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
                 ) : <span class="text-slate-400">—</span>;
             }
         },
-        { field: 'cluster', headerName: 'Cluster', width: 130, cellClass: 'text-slate-600 text-xs' },
-        { field: 'region', headerName: 'Region', width: 130, cellClass: 'text-slate-600 text-xs' },
+        {
+            field: 'cluster',
+            headerName: 'Cluster',
+            width: 130,
+            cellClass: 'text-slate-600 text-xs',
+            valueGetter: (params: any) => params.data.cluster || params.data.lokasi || params.data.site_info || '—'
+        },
+        {
+            field: 'region',
+            headerName: 'Region',
+            width: 130,
+            cellClass: 'text-slate-600 text-xs',
+            valueGetter: (params: any) => params.data.region || params.data.lokasi || params.data.pekerjaan || '—'
+        },
         {
             field: 'team_assigned',
             headerName: 'Team',
@@ -187,23 +234,25 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
             width: 140,
             valueGetter: (params: any) => {
                 if (!params.data) return '—';
-                if (params.data.stage === 'imported' || !params.data.stage_updated_at) return '—';
-                const updateDate = new Date(params.data.stage_updated_at);
+                const stageUpdatedAt = params.data.stage_updated_at;
+                if (params.data.stage === 'imported' || !stageUpdatedAt) return '—';
+                const updateDate = new Date(stageUpdatedAt);
                 const daysDiff = Math.floor((new Date().getTime() - updateDate.getTime()) / (1000 * 3600 * 24));
                 return `${daysDiff} Hari`;
             },
             cellRenderer: (params: any) => {
                 if (!params.data) return null;
-                if (params.data.stage === 'imported' || !params.data.stage_updated_at) {
+                const stageUpdatedAt = params.data.stage_updated_at;
+                if (params.data.stage === 'imported' || !stageUpdatedAt) {
                     return (
                         <div class="flex items-center">
                             <span class="text-slate-500 font-mono text-xs px-2 py-1">—</span>
                         </div>
                     );
                 }
-                const updateDate = new Date(params.data.stage_updated_at);
+                const updateDate = new Date(stageUpdatedAt);
                 const daysDiff = Math.floor((new Date().getTime() - updateDate.getTime()) / (1000 * 3600 * 24));
-                const isStuck = daysDiff > 14 || params.data.stage_notes?.toLowerCase().includes('issue') || params.data.stage === 'issue_hold';
+                const isStuck = daysDiff > 14 || (params.data.stage_notes || '').toLowerCase().includes('issue') || params.data.stage === 'issue_hold';
 
                 return (
                     <div class="flex items-center">

@@ -5,6 +5,7 @@ import {
     siteMaterials, siteEvidence, siteCosts, skpRecords,
     siteBoQRecords, siteStageLogs, mockSiteFiles, terminPengajuanRecords
 } from '../data/mockData';
+import UpdateStageModal from '../../../components/modals/UpdateStageModal';
 
 // Icons
 const ArrowLeft = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>;
@@ -34,6 +35,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     const [activeTab, setActiveTab] = createSignal<'details' | 'costs'>('details');
     const [detailsSubTab, setDetailsSubTab] = createSignal<'material' | 'skp'>('material');
     const [historyExpanded, setHistoryExpanded] = createSignal(false);
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = createSignal(false);
 
     // Data Resolution
     const site = createMemo(() => siteMasterRecords.find(s => s.id === props.siteId));
@@ -64,6 +66,13 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
         return idx;
     });
 
+    const handleUpdateStage = (newStage: string, notes?: string, payload?: any) => {
+        console.log('Updating stage:', { newStage, notes, payload });
+        // Since we're using mock data, we'll just show a success message and close the modal
+        alert(`Stage updated to ${newStage}\nNotes: ${notes || 'None'}`);
+        setIsUpdateModalOpen(false);
+    };
+
     return (
         <div class="space-y-6 pb-16 animate-in fade-in duration-300">
             {/* Header Area */}
@@ -85,7 +94,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
 
                 <div class="flex items-center gap-2">
                     <button
-                        onClick={() => alert('Update Stage Modal needs implementation')}
+                        onClick={() => setIsUpdateModalOpen(true)}
                         class="px-5 py-2.5 bg-[#2563eb] text-white font-semibold rounded-lg text-sm shadow-md hover:bg-blue-700 transition-all flex items-center gap-2"
                     >
                         Update Stage
@@ -658,6 +667,15 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                     </Show>
                 </div>
             </div>
+
+            <UpdateStageModal
+                isOpen={isUpdateModalOpen()}
+                onClose={() => setIsUpdateModalOpen(false)}
+                siteId={site()?.site_id || ''}
+                siteName={site()?.site_name}
+                currentStage={(site()?.stage as any) || 'imported'}
+                onUpdateStage={handleUpdateStage}
+            />
         </div>
     );
 };
