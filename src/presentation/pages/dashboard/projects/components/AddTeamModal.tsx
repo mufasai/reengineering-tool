@@ -118,22 +118,19 @@ const AddTeamModal: Component<AddTeamModalProps> = (props) => {
                         </div>
 
                         {/* Selected Team Info */}
-                        <Show when={selectedTeamId()}>
-                            {() => {
-                                const selectedTeam = teams().find(t => t.id === selectedTeamId());
-                                return selectedTeam ? (
-                                    <div class="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                                        <p class="text-xs font-semibold text-blue-900 mb-2">Team Member Details:</p>
-                                        <div class="space-y-1 text-xs text-blue-700">
-                                            <p><strong>Nama:</strong> {selectedTeam.nama_karyawan}</p>
-                                            <p><strong>NIK:</strong> {selectedTeam.nik}</p>
-                                            <p><strong>Jabatan:</strong> {selectedTeam.jabatan_kerja}</p>
-                                            <p><strong>Regional:</strong> {selectedTeam.regional}</p>
-                                            <p><strong>No HP:</strong> {selectedTeam.no_hp}</p>
-                                        </div>
+                        <Show when={teams().find(t => t.id === selectedTeamId())}>
+                            {(selectedTeam) => (
+                                <div class="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                                    <p class="text-xs font-semibold text-blue-900 mb-2">Team Member Details:</p>
+                                    <div class="space-y-1 text-xs text-blue-700">
+                                        <p><strong>Nama:</strong> {selectedTeam().nama_karyawan}</p>
+                                        <p><strong>NIK:</strong> {selectedTeam().nik}</p>
+                                        <p><strong>Jabatan:</strong> {selectedTeam().jabatan_kerja}</p>
+                                        <p><strong>Regional:</strong> {selectedTeam().regional}</p>
+                                        <p><strong>No HP:</strong> {selectedTeam().no_hp}</p>
                                     </div>
-                                ) : null;
-                            }}
+                                </div>
+                            )}
                         </Show>
                     </form>
 

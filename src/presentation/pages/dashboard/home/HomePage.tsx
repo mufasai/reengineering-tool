@@ -306,81 +306,90 @@ const HomePage: Component<HomePageProps> = (props) => {
             {/* SECTION 2: FINANCIAL KPI ROW */}
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {/* 1. Total Budget */}
-                <div class="bg-gradient-to-br from-blue-700 to-blue-900 rounded-lg border border-l-[3px] border-l-blue-400 p-4 flex flex-col justify-center h-[90px] relative overflow-hidden group shadow-lg">
-                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all duration-500"></div>
-                    <div class="flex items-center gap-2 mb-1 relative z-10">
-                        <Wallet class="w-4 h-4 text-blue-200" />
-                        <span class="text-xs font-bold text-white/90 uppercase tracking-wider">Total Budget</span>
+                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+                    <div class="flex items-center justify-between relative z-10">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Budget</span>
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 transition-transform group-hover:scale-110">
+                            <Wallet class="w-5 h-5" />
+                        </div>
                     </div>
-                    <div class="font-mono text-lg font-bold text-white relative z-10">{formatRupiah(totalBudget())}</div>
-                    <div class="text-[11px] text-white/70 mt-0.5 relative z-10">{activeProjects().length} Proyek Aktif</div>
+                    <div class="relative z-10 mt-auto">
+                        <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{formatRupiah(totalBudget())}</div>
+                        <div class="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                            {activeProjects().length} Proyek Aktif
+                        </div>
+                    </div>
                 </div>
 
                 {/* 2. Budget Terpakai */}
-                <div class="bg-gradient-to-br from-amber-600 to-amber-800 rounded-lg border border-l-[3px] border-l-amber-400 p-4 flex flex-col justify-center h-[90px] relative overflow-hidden group shadow-lg">
-                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all duration-500"></div>
-                    <div class="flex items-center gap-2 mb-1 relative z-10">
-                        <CreditCard class="w-4 h-4 text-amber-200" />
-                        <span class="text-xs font-bold text-white/90 uppercase tracking-wider">Terpakai</span>
+                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+                    <div class="flex items-center justify-between relative z-10">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Terpakai</span>
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 transition-transform group-hover:scale-110">
+                            <CreditCard class="w-5 h-5" />
+                        </div>
                     </div>
-                    <div class="font-mono text-lg font-bold text-white relative z-10">{formatRupiah(budgetTerpakai())}</div>
-                    <div class="text-[11px] text-white/70 mt-0.5 relative z-10">{terpakaiPercent().toFixed(1)}% dari total budget</div>
-                    <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-black/20 backdrop-blur-sm z-10">
-                        <div class="h-full bg-gradient-to-r from-amber-400 to-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.8)]" style={{ width: `${Math.min(terpakaiPercent(), 100)}%` }}></div>
+                    <div class="relative z-10 mt-auto space-y-2">
+                        <div>
+                            <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{formatRupiah(budgetTerpakai())}</div>
+                            <div class="text-[11px] text-slate-400 mt-1.5">{terpakaiPercent().toFixed(1)}% dari total</div>
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(terpakaiPercent(), 100)}%` }}></div>
+                        </div>
                     </div>
                 </div>
 
                 {/* 3. Sisa Budget */}
-                <div class="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-lg border border-l-[3px] border-l-emerald-400 p-4 flex flex-col justify-center h-[90px] relative overflow-hidden group shadow-lg">
-                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all duration-500"></div>
-                    <div class="flex items-center justify-between mb-1 relative z-10">
-                        <div class="flex items-center gap-2">
-                            <CheckCircle2 class="w-4 h-4 text-emerald-200" />
-                            <span class="text-xs font-bold text-white/90 uppercase tracking-wider">Sisa Budget</span>
+                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+                    <div class="flex items-center justify-between relative z-10">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sisa Budget</span>
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 transition-transform group-hover:scale-110">
+                            <CheckCircle2 class="w-5 h-5" />
                         </div>
-                        <span class={clsx("text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm backdrop-blur-sm", {
-                            'bg-emerald-400/20 text-emerald-100 border-emerald-400/30': sisaPercent() > 40,
-                            'bg-amber-400/20 text-amber-100 border-amber-400/30': sisaPercent() <= 40 && sisaPercent() > 20,
-                            'bg-red-400/20 text-red-100 border-red-400/30': sisaPercent() <= 20
-                        })}>{sisaPercent().toFixed(1)}%</span>
                     </div>
-                    <div class="font-mono text-lg font-bold text-white relative z-10">{formatRupiah(sisaBudget())}</div>
-                    <div class="text-[11px] text-emerald-200 mt-0.5 font-medium relative z-10">Tersedia untuk termin</div>
+                    <div class="relative z-10 mt-auto">
+                        <div class="flex items-baseline gap-2">
+                            <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{formatRupiah(sisaBudget())}</div>
+                        </div>
+                        <div class="text-[11px] text-emerald-600 font-medium mt-1.5">Tersedia untuk termin</div>
+                    </div>
                 </div>
 
                 {/* 4. Menunggu Approval */}
-                <div class="bg-gradient-to-br from-yellow-500 to-yellow-700 rounded-lg border border-l-[3px] border-l-yellow-400 p-4 flex flex-col justify-center h-[90px] cursor-pointer hover:border-yellow-300 transition-all duration-300 relative overflow-hidden group shadow-lg">
-                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all duration-500"></div>
-                    <div class="flex items-center gap-2 mb-1 relative z-10">
-                        <Clock class="w-4 h-4 text-yellow-200" />
-                        <span class="text-xs font-bold text-white/90 uppercase tracking-wider">Menunggu Approval</span>
-                        <Show when={pendingApprovals().count > 0}>
-                            <div class="w-2 h-2 rounded-full bg-yellow-300 animate-pulse ml-auto shadow-[0_0_8px_rgba(250,204,21,0.8)]"></div>
-                        </Show>
+                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden group">
+                    <div class="flex items-center justify-between relative z-10">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Approval</span>
+                        <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 transition-transform group-hover:scale-110">
+                            <Clock class="w-5 h-5" />
+                        </div>
                     </div>
-                    <div class="text-lg font-bold text-white flex items-baseline gap-1 relative z-10">
-                        {pendingApprovals().count} <span class="text-sm font-normal text-white/80">Pengajuan</span>
+                    <div class="relative z-10 mt-auto">
+                        <div class="flex items-center gap-2">
+                            <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{pendingApprovals().count}</div>
+                            <span class="text-xs font-bold text-slate-400 uppercase">Pengajuan</span>
+                        </div>
+                        <div class="text-[11px] text-orange-600 font-medium mt-1.5 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
+                            {formatRupiah(pendingApprovals().amount)} Pending
+                        </div>
                     </div>
-                    <div class="text-[11px] text-yellow-200 mt-0.5 font-mono font-medium relative z-10">{formatRupiah(pendingApprovals().amount)} pending</div>
                 </div>
 
                 {/* 5. Rata-rata Progress */}
-                <div class="bg-gradient-to-br from-purple-700 to-purple-900 rounded-lg border border-l-[3px] border-l-purple-400 p-4 flex items-center justify-between h-[90px] relative overflow-hidden group shadow-lg">
-                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all duration-500"></div>
-                    <div class="relative z-10">
-                        <div class="flex items-center gap-2 mb-1">
-                            <Activity class="w-4 h-4 text-purple-200" />
-                            <span class="text-xs font-bold text-white/90 uppercase tracking-wider">Avg Progress</span>
+                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+                    <div class="flex items-center justify-between relative z-10">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Progress</span>
+                        <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 transition-transform group-hover:scale-110">
+                            <Activity class="w-5 h-5" />
                         </div>
-                        <div class="text-lg font-bold text-white">{avgProgress()}%</div>
-                        <div class="text-[11px] text-white/70 mt-0.5">{activeSitesCount()} sites active</div>
                     </div>
-                    <div class="relative w-12 h-12 flex items-center justify-center rounded-full border-[3px] border-white/20 bg-black/10 backdrop-blur-sm shadow-sm z-10">
-                        <svg class="absolute inset-0 w-full h-full -rotate-90">
-                            <circle cx="21" cy="21" r="21" class="stroke-current text-white/30 drop-shadow-[0_0_4px_rgba(255,255,255,0.6)]" stroke-width="3" fill="none" />
-                            <circle cx="21" cy="21" r="21" class="stroke-current text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.6)]" stroke-width="3" fill="none" stroke-dasharray="132" stroke-dashoffset={132 - (132 * avgProgress()) / 100} />
-                        </svg>
-                        <span class="text-[10px] font-bold text-white">{avgProgress()}%</span>
+                    <div class="flex items-end justify-between relative z-10 mt-auto">
+                        <div>
+                            <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{avgProgress()}%</div>
+                            <div class="text-[11px] text-slate-400 mt-1.5">{activeSitesCount()} sites active</div>
+                        </div>
                     </div>
                 </div>
             </div>
