@@ -1,7 +1,13 @@
-import { createSignal, createMemo, Show, For, Switch, Match } from 'solid-js';
+import { createSignal, createMemo, Show, For, Switch, Match, onMount, createEffect } from 'solid-js';
 import type { Component } from 'solid-js';
 import { STAGE_ORDER } from '../../pages/dashboard/data/mockData';
 import type { SiteStage } from '../../pages/dashboard/data/mockData';
+import { SiteRepositoryImpl } from '../../../infrastructure/repositories/site.repository.impl';
+import { TeamRepositoryImpl } from '../../../infrastructure/repositories/team.repository.impl';
+import { UpdateSiteStageInteractor } from '../../../application/use-cases/update-site-stage.use-case';
+import { authStore } from '../../store/auth.store';
+import type { Team } from '../../../domain/entities/team.entity';
+import type { UpdateSiteStageRequest } from '../../../domain/entities/work-order.entity';
 
 // Helper for classes
 const clsx = (...classes: any[]) => classes.flat().filter(Boolean).join(' ');
@@ -71,8 +77,8 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
     'assigned→permit_process': {
         nextLabel: 'Permit Diproses',
         helper: 'Catat tanggal pengajuan permit ke TPAS.',
-        fields: ['permit_create_date'],
-        requiredFields: ['permit_create_date'],
+        fields: ['permit_date'],
+        requiredFields: ['permit_date'],
         paymentNote: null
     },
     'permit_process→permit_ready': {
@@ -172,12 +178,41 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     // Dynamic Fields State
     const [formData, setFormData] = createSignal<Record<string, any>>({
-        permit_create_date: new Date().toISOString().split('T')[0] // default today
+        permit_date: new Date().toISOString().split('T')[0] // default today
     });
 
     // Files State
     const [files, setFiles] = createSignal<File[]>([]);
     const [isDragActive, setIsDragActive] = createSignal(false);
+
+    // Metadata & API State
+    const [teams, setTeams] = createSignal<Team[]>([]);
+    const [isSubmitting, setIsSubmitting] = createSignal(false);
+    const [fetchError, setFetchError] = createSignal('');
+
+    onMount(async () => {
+        try {
+            const teamRepo = new TeamRepositoryImpl();
+            const teamsData = await teamRepo.findAll();
+            setTeams(teamsData);
+        } catch (err) {
+            console.error('Failed to fetch teams:', err);
+            setFetchError('Gagal mengambil data tim');
+        }
+    });
+
+    // Reset form when modal opens with new site/stage
+    createEffect(() => {
+        if (props.isOpen) {
+            setNotes('');
+            setShowIssueForm(false);
+            setIssueNotes('');
+            setFiles([]);
+            setFormData({
+                permit_date: new Date().toISOString().split('T')[0]
+            });
+        }
+    });
 
     const handleFormChange = (key: string, value: any) => {
         setFormData(prev => ({ ...prev, [key]: value }));
@@ -237,14 +272,44 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     const isIssueValid = createMemo(() => issueNotes().trim().length > 0);
 
-    const handleSubmit = (e: Event) => {
+    const handleSubmit = async (e: Event) => {
         e.preventDefault();
+        
+        const changedBy = authStore.user()?.name || 'System';
+        
         if (showIssueForm()) {
             if (!isIssueValid()) return;
+            // For now issue still uses callback, but could be integrated to API too
             props.onUpdateStage('issue_hold', issueNotes(), { issueAction: issueAction() });
         } else {
             if (!isMainFormValid()) return;
-            props.onUpdateStage(nextLogicalStageId()!, notes(), { ...formData(), files: files() });
+            
+            try {
+                setIsSubmitting(true);
+                const nextStage = nextLogicalStageId()!;
+                
+                const request: UpdateSiteStageRequest = {
+                    stage: nextStage,
+                    notes: notes(),
+                    changed_by: changedBy,
+                    ...formData()
+                };
+
+                const siteRepo = new SiteRepositoryImpl();
+                const updateStageUseCase = new UpdateSiteStageInteractor(siteRepo);
+                
+                await updateStageUseCase.execute(props.siteId, request);
+                
+                props.onUpdateStage(nextStage, notes(), formData());
+                props.onClose();
+            } catch (err: any) {
+                console.error('Failed to update stage:', err);
+                // We'll use the issue format/style for error feedback if needed, 
+                // or just alert for now since we don't have a dedicated error area besides the modal
+                alert(err.message || 'Gagal mengupdate stage. Silakan coba lagi.');
+            } finally {
+                setIsSubmitting(false);
+            }
         }
     };
 
@@ -264,17 +329,17 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                             onChange={(e) => handleFormChange('team_id', e.currentTarget.value)}
                         >
                             <option value="">Pilih tim lapangan...</option>
-                            <option value="t1">Alpha Team (Jakarta)</option>
-                            <option value="t2">Beta Team (Bandung)</option>
-                            <option value="t3">Gamma Team (Surabaya)</option>
+                            <For each={teams()}>
+                                {(t) => <option value={t.id}>{t.nama}</option>}
+                            </For>
                         </select>
                     </div>
                 </Match>
-                <Match when={['permit_create_date', 'permit_start_date', 'permit_expiry_date', 'tgl_rencana_impl', 'tgl_aktual_mulai', 'tgl_bast', 'tgl_invoice'].includes(field)}>
+                <Match when={['permit_date', 'permit_start_date', 'permit_expiry_date', 'tgl_rencana_impl', 'tgl_aktual_mulai', 'tgl_bast', 'tgl_invoice'].includes(field)}>
                     <div class="space-y-1">
                         <label class="block text-sm font-medium text-slate-700">
                             {
-                                field === 'permit_create_date' ? 'Tanggal Buat Permit' :
+                                field === 'permit_date' ? 'Tanggal Buat Permit' :
                                     field === 'permit_start_date' ? 'Tanggal Berlaku Permit TPAS' :
                                         field === 'permit_expiry_date' ? 'Tanggal Berakhir Permit TPAS' :
                                             field === 'tgl_rencana_impl' ? 'Tanggal Rencana Implementasi' :
@@ -499,7 +564,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                     {/* Header */}
                     <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
                         <div>
-                            <h2 class="text-lg font-bold text-slate-800">Update Stage — {props.siteId}</h2>
+                            <h2 class="text-lg font-bold text-slate-800">Update Stage</h2>
                             <p class="text-sm text-slate-500">{props.siteName || 'Site Name Placeholder'}</p>
                         </div>
                         <button onClick={props.onClose} class="p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
@@ -645,7 +710,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 disabled={!config() || !isMainFormValid()}
                                 class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded transition-colors text-sm shadow-sm flex items-center gap-2"
                             >
-                                Update Stage <ChevronRightIcon class="w-4 h-4" />
+                                Update Stage {isSubmitting() ? '...' : <ChevronRightIcon class="w-4 h-4" />}
                             </button>
                         }>
                             <button

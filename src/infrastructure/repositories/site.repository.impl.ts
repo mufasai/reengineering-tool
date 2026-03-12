@@ -1,6 +1,6 @@
 import { apiClient } from "../api/api-client";
 import type { SiteRepository } from "../../domain/repositories/interfaces";
-import type { Site, CreateSiteRequest } from "../../domain/entities/work-order.entity";
+import type { Site, CreateSiteRequest, UpdateSiteStageRequest } from "../../domain/entities/work-order.entity";
 import type { ApiResponse } from "../../domain/entities/project.entity";
 import type { SiteFile, UploadSiteFileRequest, SiteFilesApiResponse, UploadSiteFileResponse } from "../../domain/entities/site-file.entity";
 import type { SiteEvidence, UploadSiteEvidenceRequest, SiteEvidenceApiResponse, CreateEvidenceApiResponse } from "../../domain/entities/site-evidence.entity";
@@ -75,6 +75,11 @@ export class SiteRepositoryImpl implements SiteRepository {
     async deleteTeamFromSite(siteId: string, teamMemberId: string): Promise<void> {
         const rawTeamId = teamMemberId.includes(':') ? teamMemberId.split(':').pop()! : teamMemberId;
         await apiClient.delete(`/api/sites/${siteId}/teams/${rawTeamId}`);
+    }
+
+    async updateStage(siteId: string, request: UpdateSiteStageRequest): Promise<Site> {
+        const response = await apiClient.post<ApiResponse<Site>>(`/api/sites/${siteId}/stage`, request);
+        return response.data;
     }
 }
 
