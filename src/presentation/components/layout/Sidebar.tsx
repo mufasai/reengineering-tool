@@ -90,10 +90,10 @@ const Sidebar: Component<SidebarProps> = (props) => {
     const pekerjaanItems = () => {
         const items: any[] = [];
         if (hasPermission('site-master')) {
-            items.push({ icon: DatabaseIcon, label: 'Semua Sites', id: 'ALL_SITES', count: projects().length });
-            items.push({ icon: WorkOrderIcon, label: 'Work Orders', id: 'WO' });
-            items.push({ icon: FileTextIcon, label: 'SPK', id: 'SPK' });
-            items.push({ icon: ReceiptIcon, label: 'Termin', id: 'TERMIN' });
+            items.push({ icon: DatabaseIcon, label: 'Sites', id: 'ALL_SITES', count: projects().length });
+            // items.push({ icon: WorkOrderIcon, label: 'Work Orders', id: 'WO' });
+            // items.push({ icon: FileTextIcon, label: 'SPK', id: 'SPK' });
+            // items.push({ icon: ReceiptIcon, label: 'Termin', id: 'TERMIN' });
         }
         return items;
     };
@@ -101,9 +101,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
     // 2. DATA & DOKUMEN ITEMS
     const dataDokumenItems = () => {
         const items: any[] = [];
-        if (hasPermission('site-master')) {
-            items.push({ icon: DatabaseIcon, label: 'Sites', id: 'SITES', badge: 1 });
-        }
+        // if (hasPermission('site-master')) {
+        //     items.push({ icon: DatabaseIcon, label: 'Sites', id: 'SITES', badge: 1 });
+        // }
         if (hasPermission('people')) {
             items.push({ icon: UsersIcon, label: 'People', id: 'PEOPLE' });
         }

@@ -99,3 +99,9 @@ export interface WorkOrder {
     poNumber?: string; // Updated in Term-4
     createdAt: Date;
 }
+
+export interface UpdateSiteStageRequest extends Record<string, any> {
+    stage: string;
+    notes?: string;
+    changed_by: string;
+}

@@ -9,7 +9,9 @@ import UpdateStageModal from '../../../components/modals/UpdateStageModal';
 import UploadSiteFileModal from './components/UploadSiteFileModal';
 import UploadSiteEvidenceModal from './components/UploadSiteEvidenceModal';
 import SiteFilePreviewModal from './components/SiteFilePreviewModal';
+import SiteEvidencePreviewModal from './components/SiteEvidencePreviewModal';
 import type { SiteFile } from '../../../../domain/entities/site-file.entity';
+import type { SiteEvidence } from '../../../../domain/entities/site-evidence.entity';
 import { GetSiteByIdInteractor } from '../../../../application/use-cases/get-site-by-id.use-case';
 import { GetSiteEvidenceInteractor } from '../../../../application/use-cases/get-site-evidence.use-case';
 import { siteRepository } from '../../../../infrastructure/repositories/site.repository.impl';
@@ -55,8 +57,12 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     const [selectedFile, setSelectedFile] = createSignal<SiteFile | null>(null);
     const [isPreviewModalOpen, setIsPreviewModalOpen] = createSignal(false);
 
+    // Site Evidence Preview State
+    const [selectedEvidence, setSelectedEvidence] = createSignal<SiteEvidence | null>(null);
+    const [isEvidencePreviewOpen, setIsEvidencePreviewOpen] = createSignal(false);
+
     // Data Resolution
-    const [siteDetail] = createResource(() => props.siteId, (id) => getSiteById.execute(id));
+    const [siteDetail, { refetch: refetchSite }] = createResource(() => props.siteId, (id) => getSiteById.execute(id));
     const [siteFiles, { refetch: refetchFiles }] = createResource(() => props.siteId, (id) => siteRepository.getFiles(id));
     const [siteEvidenceData, { refetch: refetchEvidence }] = createResource(() => props.siteId, (id) => getSiteEvidence.execute(id));
 
@@ -89,9 +95,10 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     });
 
     const handleUpdateStage = (newStage: string, notes?: string) => {
-        console.log('Updating stage:', { newStage, notes });
-        // Since we're using mock data, we'll just show a success message and close the modal
-        alert(`Stage updated to ${newStage}\nNotes: ${notes || 'None'}`);
+        console.log('Stage transition triggered:', { newStage, notes });
+        // Site details are updated by the modal directly via API
+        // Here we just need to ensure the parent state is synced
+        refetchSite();
         setIsUpdateModalOpen(false);
     };
 
@@ -156,6 +163,14 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                             refetchEvidence();
                         }}
                     />
+                    <SiteEvidencePreviewModal
+                        show={isEvidencePreviewOpen()}
+                        evidence={selectedEvidence()}
+                        onClose={() => {
+                            setIsEvidencePreviewOpen(false);
+                            setSelectedEvidence(null);
+                        }}
+                    />
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center gap-4">
                             <button
@@ -196,32 +211,47 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
 
                                 {/* Progress Bar Active */}
                                 <div
-                                    class="absolute top-[18px] left-[60px] h-0.5 bg-blue-500 transition-all duration-500 -z-0"
+                                    class="absolute top-[18px] left-[60px] h-0.5 bg-emerald-500 transition-all duration-500 -z-0"
                                     style={{
-                                        width: `${currentStageIndex() >= 0 ? ((currentStageIndex() / (stages.length - 1)) * 100) : 0}%`,
+                                        width: `${currentStageIndex() > 0 ? (((currentStageIndex()) / (stages.length - 1)) * 100) : 0}%`,
                                         "max-width": "calc(100% - 120px)"
                                     }}
                                 ></div>
 
                                 <For each={stages}>
                                     {(st, index) => {
-                                        const isCompleted = index() <= currentStageIndex();
+                                        const isCompleted = index() < currentStageIndex();
                                         const isCurrent = index() === currentStageIndex();
+                                        const isPending = index() > currentStageIndex();
 
                                         return (
-                                            <div class="flex flex-col items-center gap-3 z-10 w-24">
+                                            <div class="flex flex-col items-center gap-2 z-10 w-24 translate-y-[-2px]">
                                                 <div class={clsx(
-                                                    "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-500 border-2 font-semibold text-sm",
-                                                    isCompleted ? "bg-white border-blue-500 text-slate-400" : "bg-white border-slate-200 text-slate-300"
+                                                    "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 border-2 font-bold text-sm shadow-sm",
+                                                    isCompleted ? "bg-emerald-500 border-emerald-500 text-white" :
+                                                        isCurrent ? "bg-white border-blue-500 text-blue-600 ring-4 ring-blue-50" :
+                                                            "bg-white border-slate-200 text-slate-300"
                                                 )}>
-                                                    {index() + 1}
+                                                    <Show when={isCompleted} fallback={index() + 1}>
+                                                        <CheckCircle2 class="w-6 h-6" />
+                                                    </Show>
                                                 </div>
-                                                <span class={clsx(
-                                                    "text-xs font-semibold text-center tracking-tight",
-                                                    isCurrent || isCompleted ? "text-slate-600" : "text-slate-400"
-                                                )}>
-                                                    {st.label}
-                                                </span>
+                                                <div class="flex flex-col items-center">
+                                                    <span class={clsx(
+                                                        "text-xs font-bold text-center tracking-tight",
+                                                        isCurrent ? "text-blue-700" : isCompleted ? "text-slate-700" : "text-slate-400"
+                                                    )}>
+                                                        {st.label}
+                                                    </span>
+                                                    <Show when={isCompleted || isCurrent}>
+                                                        <span class={clsx(
+                                                            "text-[10px] font-semibold mt-0.5",
+                                                            isCompleted ? "text-emerald-600" : "text-blue-500"
+                                                        )}>
+                                                            {isCurrent ? '0 hr di stage ini' : (site()?.stage_updated_at ? new Date(site()!.stage_updated_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '12 Mar')}
+                                                        </span>
+                                                    </Show>
+                                                </div>
                                             </div>
                                         );
                                     }}
@@ -360,9 +390,15 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                                 <For each={evidenceList()}>
                                                     {(item) => (
-                                                        <div class="group relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm transition-all hover:shadow-md">
+                                                        <div
+                                                            onClick={() => {
+                                                                setSelectedEvidence(item);
+                                                                setIsEvidencePreviewOpen(true);
+                                                            }}
+                                                            class="group relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm transition-all hover:shadow-md cursor-pointer"
+                                                        >
                                                             <Show
-                                                                when={item.url}
+                                                                when={item.url || item.id}
                                                                 fallback={
                                                                     <div class="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
                                                                         <ImageIcon class="w-8 h-8 mb-2 opacity-50" />
@@ -371,9 +407,14 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                                                 }
                                                             >
                                                                 <img
-                                                                    src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL}${item.url}`}
+                                                                    src={item.url ? ((item.url.startsWith('http') || item.url.startsWith('data:')) ? item.url : `${import.meta.env.VITE_API_URL}${item.url}`) : `${import.meta.env.VITE_API_URL}/api/site-evidence/${item.id}/preview`}
                                                                     alt={item.progress_tag}
                                                                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                                    onError={(e) => {
+                                                                        // If image fails to load, maybe show placeholder? 
+                                                                        // But Solid handles standard HTML5 error.
+                                                                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                                    }}
                                                                 />
                                                             </Show>
 

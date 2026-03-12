@@ -1,4 +1,4 @@
-import type { WorkOrder, WOStatus, Site, CreateSiteRequest } from "../entities/work-order.entity";
+import type { WorkOrder, WOStatus, Site, CreateSiteRequest, UpdateSiteStageRequest } from "../entities/work-order.entity";
 import type { Team, SiteTeamMember, AddTeamToSiteRequest } from "../entities/team.entity";
 import type { Termin, PaymentStatus } from "../entities/payment.entity";
 import type { MaterialTransaction, Material, CreateMaterialRequest } from "../entities/material.entity";
@@ -42,6 +42,7 @@ export interface SiteRepository {
     getTeamStructure(siteId: string): Promise<SiteTeamMember[]>;
     addTeamToSite(siteId: string, request: AddTeamToSiteRequest): Promise<SiteTeamMember>;
     deleteTeamFromSite(siteId: string, teamMemberId: string): Promise<void>;
+    updateStage(siteId: string, request: UpdateSiteStageRequest): Promise<Site>;
 }
 
 export interface PeopleRepository {

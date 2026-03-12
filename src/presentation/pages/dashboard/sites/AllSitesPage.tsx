@@ -7,6 +7,8 @@ import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { type ProjectType } from '../data/mockData';
 import BulkStageUpdateModal from '../../../components/modals/BulkStageUpdateModal';
 import CreateSiteModal from './components/CreateSiteModal';
+import ImportSiteModal from '../../../components/modals/ImportSiteModal';
+import ModernKPICard from '../../../components/cards/ModernKPICard';
 import { GetAllSitesInteractor } from '../../../../application/use-cases/get-all-sites.use-case';
 import { siteRepository } from '../../../../infrastructure/repositories/site.repository.impl';
 
@@ -19,6 +21,10 @@ const EyeIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p
 const AlertCircleIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>;
 const RefreshCwIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>;
 const FileSpreadsheetIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="16" x2="8" y1="13" y2="13" /><line x1="16" x2="8" y1="17" y2="17" /><line x1="10" x2="8" y1="9" y2="9" /></svg>;
+const LayersIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.1a1 1 0 0 0 0 1.8l8.57 3.92a2 2 0 0 0 1.66 0L21.4 7.9a1 1 0 0 0 0-1.8Z"/><path d="m3.58 10.16 6.59 3a2 2 0 0 0 1.66 0l6.59-3a1 1 0 0 1 1.14 1.57l-7.31 3.34a2 2 0 0 1-1.66 0l-7.31-3.34a1 1 0 0 1 1.14-1.57Z"/><path d="m3.58 15.1 6.59 3a2 2 0 0 0 1.66 0l6.59-3a1 1 0 0 1 1.14 1.57l-7.31 3.34a2 2 0 0 1-1.66 0l-7.31-3.34a1 1 0 0 1 1.14-1.57Z"/></svg>;
+const MapPinIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>;
+const FolderKanbanIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="M8 10v4"/><path d="M12 10v2"/><path d="M16 10v6"/></svg>;
+const CheckCircle2Icon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" /><path d="m9 12 2 2 4-4" /></svg>;
 
 const STAGE_COLORS: Record<string, string> = {
     'imported': 'bg-gray-100 text-gray-700 border-gray-200',
@@ -52,6 +58,7 @@ interface AllSitesPageProps {
 const AllSitesPage: Component<AllSitesPageProps> = (props) => {
     const [isBulkOpen, setIsBulkOpen] = createSignal(false);
     const [isCreateOpen, setIsCreateOpen] = createSignal(false);
+    const [isImportOpen, setIsImportOpen] = createSignal(false);
 
     // Filters
     const [searchTerm, setSearchTerm] = createSignal('');
@@ -59,6 +66,7 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
     const [filterStage, setFilterStage] = createSignal<string>('All');
     const [filterCluster, setFilterCluster] = createSignal<string>('All');
     const [filterTeam, setFilterTeam] = createSignal<string>('All');
+    const [quickFilter, setQuickFilter] = createSignal<string | null>(null);
 
     const [sites, { refetch }] = createResource(() => getAllSites.execute());
 
@@ -80,6 +88,19 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
     const filteredSites = createMemo(() => {
         const data = sites() || [];
         return data.filter((site: any) => {
+            // Apply Quick Filters from KPI Cards
+            if (quickFilter()) {
+                if (quickFilter() === 'filter' && !((site.project_type || site.project_id) === 'FILTER' || (site.project_type || '').includes('FILTER'))) return false;
+                if (quickFilter() === 'combat' && !((site.project_type || site.project_id) === 'COMBAT' || (site.project_type || '').includes('COMBAT'))) return false;
+                if (quickFilter() === 'unassigned' && site.team_assigned) return false;
+                if (quickFilter() === 'attention') {
+                    const stageUpdatedAt = (site as any).stage_updated_at;
+                    const daysDiff = stageUpdatedAt ? Math.floor((new Date().getTime() - new Date(stageUpdatedAt).getTime()) / (1000 * 3600 * 24)) : 0;
+                    const needsAttention = daysDiff > 14 || site.stage_notes?.toLowerCase().includes('issue') || site.stage === 'issue_hold';
+                    if (!needsAttention) return false;
+                }
+                if (quickFilter() === 'selesai' && site.stage !== 'completed') return false;
+            }
 
             if (filterType() !== 'All' && (site.project_type || site.project_id) !== filterType()) return false;
             if (filterStage() !== 'All' && site.stage !== filterStage()) return false;
@@ -114,26 +135,34 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
     const stats = createMemo(() => {
         let filter = 0;
         let combat = 0;
-        let actions = 0;
-        let others = 0;
+        let attention = 0;
+        let selesai = 0;
+        let unassigned = 0;
         const data = sites() || [];
 
         data.forEach((s: any) => {
             const type = s.project_type || s.project_id;
             if (type === 'FILTER' || (type && type.includes('FILTER'))) filter++;
             else if (type === 'COMBAT' || (type && type.includes('COMBAT'))) combat++;
-            else others++;
+            
+            if (!s.team_assigned) unassigned++;
+            if (s.stage === 'completed') selesai++;
 
             if (s.stage !== 'imported' && (s as any).stage_updated_at) {
                 const daysDiff = Math.floor((new Date().getTime() - new Date((s as any).stage_updated_at).getTime()) / (1000 * 3600 * 24));
                 if (daysDiff > 14 || s.stage_notes?.toLowerCase().includes('issue') || (s.stage as string) === 'issue_hold') {
-                    actions++;
+                    attention++;
                 }
             }
         });
 
-        return { total: data.length, filter, combat, others, actions };
+        return { total: data.length, filter, combat, unassigned, attention, selesai };
     });
+
+    const handlePillClick = (key: string) => {
+        if (key === 'total') setQuickFilter(null);
+        else setQuickFilter(prev => prev === key ? null : key);
+    };
 
     const resetFilters = () => {
         setSearchTerm('');
@@ -317,30 +346,93 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
                     <p class="text-[var(--text-secondary)] mt-1">Progress seluruh site lintas tipe pekerjaan</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button onClick={() => setIsCreateOpen(true)} class="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg text-sm transition-all shadow-md shadow-blue-500/10 flex items-center gap-2 hover:bg-blue-700 active:scale-95">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14" /></svg>
-                        Create New Site
-                    </button>
                     <button onClick={() => setIsBulkOpen(true)} class="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2">
                         <FileSpreadsheetIcon class="w-4 h-4 text-blue-600" />
                         Bulk Update Stage
                     </button>
+                    <button 
+                        onClick={() => setIsImportOpen(true)}
+                        class="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg text-sm transition-all shadow-md shadow-blue-500/10 flex items-center gap-2 hover:bg-blue-700 active:scale-95"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14" /></svg>
+                        Import BoQ
+                    </button>
                 </div>
             </div>
 
-            {/* Summary Strip */}
-            <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-md px-4 py-2 flex items-center gap-4 text-sm font-medium text-slate-600 overflow-x-auto shadow-sm backdrop-blur-sm">
-                <span class="font-bold text-slate-800">Total: {stats().total} sites</span>
-                <span class="text-slate-300">•</span>
-                <span>{stats().filter} Filter</span>
-                <span class="text-slate-300">•</span>
-                <span>{stats().combat} Combat</span>
-                <span class="text-slate-300">•</span>
-                <span>{stats().others} lainnya</span>
-                <span class="text-slate-300">•</span>
-                <span class={clsx("flex items-center gap-1", stats().actions > 0 ? "text-amber-600 font-bold" : "")}>
-                    {stats().actions} butuh perhatian {stats().actions > 0}
-                </span>
+            {/* KPI Summary Section */}
+            <div class="relative">
+                <div class="flex gap-3 overflow-x-auto pb-2 custom-scrollbar no-scrollbar" style={{ "scrollbar-width": "none", "-ms-overflow-style": "none" }}>
+                    <ModernKPICard
+                        title="Total Sites"
+                        value={stats().total.toString()}
+                        icon={LayersIcon}
+                        iconClass="bg-blue-600 text-white"
+                        onClick={() => handlePillClick('total')}
+                        isActive={quickFilter() === null}
+                        compact
+                        minWidth={170}
+                        class="shrink-0"
+                    />
+                    <ModernKPICard
+                        title="Filter Sites"
+                        value={stats().filter.toString()}
+                        icon={MapPinIcon}
+                        iconClass="bg-emerald-500 text-white"
+                        onClick={() => handlePillClick('filter')}
+                        isActive={quickFilter() === 'filter'}
+                        compact
+                        minWidth={170}
+                        class="shrink-0"
+                    />
+                    <ModernKPICard
+                        title="Combat Sites"
+                        value={stats().combat.toString()}
+                        icon={FolderKanbanIcon}
+                        iconClass="bg-amber-500 text-white"
+                        onClick={() => handlePillClick('combat')}
+                        isActive={quickFilter() === 'combat'}
+                        compact
+                        minWidth={170}
+                        class="shrink-0"
+                    />
+                    <ModernKPICard
+                        title="Unassigned"
+                        value={stats().unassigned.toString()}
+                        icon={AlertCircleIcon}
+                        iconClass={stats().unassigned > 0 ? "bg-red-500 text-white" : "bg-slate-300 text-white"}
+                        onClick={() => handlePillClick('unassigned')}
+                        isActive={quickFilter() === 'unassigned'}
+                        trend={stats().unassigned > 0 ? { direction: 'down', label: 'Needs Assignment' } : undefined}
+                        compact
+                        minWidth={170}
+                        class="shrink-0"
+                    />
+                    <ModernKPICard
+                        title="Butuh Perhatian"
+                        value={stats().attention.toString()}
+                        icon={AlertCircleIcon}
+                        iconClass={stats().attention > 0 ? "bg-amber-500 text-white" : "bg-slate-300 text-white"}
+                        onClick={() => handlePillClick('attention')}
+                        isActive={quickFilter() === 'attention'}
+                        trend={stats().attention > 0 ? { direction: 'down', label: 'Stuck >14 days' } : undefined}
+                        compact
+                        minWidth={170}
+                        class="shrink-0"
+                    />
+                    <ModernKPICard
+                        title="Selesai"
+                        value={stats().selesai.toString()}
+                        icon={CheckCircle2Icon}
+                        iconClass="bg-emerald-500 text-white"
+                        onClick={() => handlePillClick('selesai')}
+                        isActive={quickFilter() === 'selesai'}
+                        trend={{ direction: 'up', label: 'Completed' }}
+                        compact
+                        minWidth={170}
+                        class="shrink-0"
+                    />
+                </div>
             </div>
 
             {/* Filter Bar */}
@@ -434,6 +526,19 @@ const AllSitesPage: Component<AllSitesPageProps> = (props) => {
                     onCancel={() => setIsCreateOpen(false)}
                 />
             </Show>
+
+            <ImportSiteModal
+                isOpen={isImportOpen()}
+                onClose={() => setIsImportOpen(false)}
+                onImportExcel={(data, name) => {
+                    console.log(`Importing ${name}`, data);
+                    refetch();
+                }}
+                onAddManual={() => {
+                    setIsImportOpen(false);
+                    setIsCreateOpen(true);
+                }}
+            />
         </div>
     );
 };

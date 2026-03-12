@@ -3,6 +3,7 @@ import type { Component } from 'solid-js';
 import type { UploadSiteEvidenceRequest } from '../../../../../domain/entities/site-evidence.entity';
 import { SiteRepositoryImpl } from '../../../../../infrastructure/repositories/site.repository.impl';
 import { UploadSiteEvidenceInteractor } from '../../../../../application/use-cases/upload-site-evidence.use-case';
+import { authStore } from '../../../../store/auth.store';
 
 // Icons
 const XIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18" /><line x1="6" x2="18" y1="6" y2="18" /></svg>;
@@ -26,7 +27,7 @@ const PROGRESS_TAGS = [
 const UploadSiteEvidenceModal: Component<UploadSiteEvidenceModalProps> = (props) => {
     const [progressTag, setProgressTag] = createSignal('survei');
     const [stageContext, setStageContext] = createSignal('');
-    const [uploadedBy, setUploadedBy] = createSignal('');
+    const [uploadedBy, setUploadedBy] = createSignal(authStore.user()?.name || '');
     const [selectedFile, setSelectedFile] = createSignal<File | null>(null);
     const [loading, setLoading] = createSignal(false);
     const [error, setError] = createSignal('');
@@ -69,7 +70,6 @@ const UploadSiteEvidenceModal: Component<UploadSiteEvidenceModalProps> = (props)
             // Reset form
             setProgressTag('survei');
             setStageContext('');
-            setUploadedBy('');
             setSelectedFile(null);
 
             props.onSuccess();
@@ -86,7 +86,6 @@ const UploadSiteEvidenceModal: Component<UploadSiteEvidenceModalProps> = (props)
         if (!loading()) {
             setProgressTag('survei');
             setStageContext('');
-            setUploadedBy('');
             setSelectedFile(null);
             setError('');
             props.onClose();
@@ -164,21 +163,6 @@ const UploadSiteEvidenceModal: Component<UploadSiteEvidenceModalProps> = (props)
                             />
                         </div>
 
-                        {/* Uploaded By */}
-                        <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-slate-700">
-                                Diupload Oleh <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={uploadedBy()}
-                                onInput={(e) => setUploadedBy(e.currentTarget.value)}
-                                placeholder="Masukkan nama Anda"
-                                required
-                                disabled={loading()}
-                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400 disabled:bg-slate-100"
-                            />
-                        </div>
 
                         {/* File Upload */}
                         <div class="space-y-2">
