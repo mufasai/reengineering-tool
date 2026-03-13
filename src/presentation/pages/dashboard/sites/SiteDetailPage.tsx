@@ -1,5 +1,8 @@
 import { createSignal, createMemo, For, Show, onMount, createResource } from 'solid-js';
 import type { Component } from 'solid-js';
+import AgGridSolid from 'ag-grid-solid';
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-alpine.css';
 import {
     siteMasterRecords, projects, teams, people,
     siteMaterials, siteCosts, skpRecords,
@@ -100,6 +103,91 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
         // Here we just need to ensure the parent state is synced
         refetchSite();
         setIsUpdateModalOpen(false);
+    };
+
+    const fileColumnDefs = [
+        {
+            headerName: 'Title / Filename',
+            flex: 1,
+            minWidth: 250,
+            cellRenderer: (params: any) => {
+                const file = params.data;
+                if (!file) return null;
+                return (
+                    <div class="flex flex-col py-2 leading-tight">
+                        <span class="text-slate-800 font-bold">{file.title || 'No Title'}</span>
+                        <span class="text-[10px] text-slate-400 font-mono truncate">{file.original_name}</span>
+                    </div>
+                );
+            }
+        },
+        {
+            field: 'mime_type',
+            headerName: 'Mime Type',
+            width: 120,
+            cellRenderer: (params: any) => {
+                const ext = params.value?.split('/').pop() || 'file';
+                return (
+                    <div class="flex items-center h-full">
+                        <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] uppercase font-bold tracking-tighter">
+                            {ext}
+                        </span>
+                    </div>
+                );
+            }
+        },
+        {
+            field: 'uploaded_by',
+            headerName: 'Uploaded By',
+            width: 150,
+            cellRenderer: (params: any) => <span class="font-semibold text-slate-600">{params.value || 'System'}</span>
+        },
+        {
+            field: 'size',
+            headerName: 'Size',
+            width: 100,
+            valueGetter: (params: any) => params.data ? `${(params.data.size / 1024).toFixed(0)} KB` : '—'
+        },
+        {
+            field: 'uploaded_at',
+            headerName: 'Uploaded At',
+            width: 150,
+            cellRenderer: (params: any) => <span class="text-xs text-slate-400 font-medium">{params.value ? new Date(params.value).toLocaleDateString() : '—'}</span>
+        },
+        {
+            headerName: 'Action',
+            width: 80,
+            sortable: false,
+            filter: false,
+            pinned: 'right',
+            cellRenderer: (params: any) => (
+                <div class="flex items-center justify-center h-full">
+                    <button
+                        onClick={() => {
+                            setSelectedFile(params.data);
+                            setIsPreviewModalOpen(true);
+                        }}
+                        class="p-2 text-blue-600 hover:bg-blue-50 transition-all bg-white border border-blue-100 rounded-lg shadow-sm"
+                    >
+                        <EyeIcon class="w-4 h-4" />
+                    </button>
+                </div>
+            )
+        }
+    ];
+
+    const fileGridOptions = {
+        defaultColDef: {
+            sortable: true,
+            filter: true,
+            resizable: true,
+            suppressMovable: true,
+            cellStyle: { display: 'flex', alignItems: 'center' }
+        },
+        headerHeight: 50,
+        rowHeight: 65,
+        animateRows: true,
+        suppressCellFocus: true,
     };
 
     return (
@@ -639,65 +727,35 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                                 </div>
                                             </div>
 
-                                            <div class="overflow-x-auto text-slate-800">
-                                                <table class="w-full text-left">
-                                                    <thead>
-                                                        <tr class="border-b border-slate-100 text-[10px] font-semibold text-slate-400 uppercase tracking-widest bg-slate-50/30">
-                                                            <th class="px-4 py-3">Title / Filename</th>
-                                                            <th class="px-4 py-3">Mime Type</th>
-                                                            <th class="px-4 py-3">Uploaded By</th>
-                                                            <th class="px-4 py-3">Size</th>
-                                                            <th class="px-4 py-3">Uploaded At</th>
-                                                            <th class="px-4 py-3 text-right">Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody class="text-sm">
-                                                        <For each={files()}>
-                                                            {(file) => (
-                                                                <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors font-medium">
-                                                                    <td class="px-4 py-4">
-                                                                        <div class="flex flex-col">
-                                                                            <span class="text-slate-800 font-bold">{file.title || 'No Title'}</span>
-                                                                            <span class="text-[10px] text-slate-400 font-mono truncate max-w-[200px]">{file.original_name}</span>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td class="px-4 py-4">
-                                                                        <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] uppercase font-bold tracking-tighter">
-                                                                            {file.mime_type.split('/').pop()}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td class="px-4 py-4 text-slate-600 font-semibold">{file.uploaded_by || 'System'}</td>
-                                                                    <td class="px-4 py-4 text-slate-600">{(file.size / 1024).toFixed(0)} KB</td>
-                                                                    <td class="px-4 py-4 text-slate-400 text-xs">{new Date(file.uploaded_at).toLocaleDateString()}</td>
-                                                                    <td class="px-4 py-4 text-right">
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setSelectedFile(file);
-                                                                                setIsPreviewModalOpen(true);
-                                                                            }}
-                                                                            class="p-2 text-blue-600 hover:bg-blue-50 transition-all bg-white border border-blue-100 rounded-lg shadow-sm"
-                                                                        >
-                                                                            <EyeIcon class="w-4 h-4" />
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-                                                        </For>
-                                                        <Show when={files().length === 0}>
-                                                            <tr>
-                                                                <td colspan="6" class="py-16">
-                                                                    <div class="flex flex-col items-center justify-center text-slate-400 gap-4">
-                                                                        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
-                                                                            <Search class="w-8 h-8 text-slate-200" />
-                                                                        </div>
-                                                                        <p class="text-xl font-semibold text-[#1e293b]">No files found</p>
-                                                                        <p class="text-sm">Beberapa dokumen mungkin belum diupload atau sedang diproses.</p>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        </Show>
-                                                    </tbody>
-                                                </table>
+                                            <div class="bg-white rounded-xl overflow-hidden h-[400px] flex flex-col">
+                                                <div class="ag-theme-alpine w-full flex-1" style={{
+                                                    '--ag-background-color': '#ffffff',
+                                                    '--ag-odd-row-background-color': '#f8fafc',
+                                                    '--ag-header-background-color': '#ffffff',
+                                                    '--ag-header-foreground-color': '#64748b',
+                                                    '--ag-header-font-weight': '800',
+                                                    '--ag-header-font-size': '11px',
+                                                    '--ag-border-color': '#f1f5f9',
+                                                    '--ag-row-hover-color': '#eff6ff',
+                                                    '--ag-selected-row-background-color': '#dbeafe',
+                                                    '--ag-font-family': "inherit",
+                                                    '--ag-font-size': '13px',
+                                                }}>
+                                                    <AgGridSolid
+                                                        columnDefs={fileColumnDefs}
+                                                        rowData={files()}
+                                                        gridOptions={fileGridOptions}
+                                                        overlayNoRowsTemplate={`
+                                                            <div class="flex flex-col items-center justify-center p-16">
+                                                                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                                                                </div>
+                                                                <p class="text-xl font-semibold text-[#1e293b]">No files found</p>
+                                                                <p class="text-sm text-slate-500">Beberapa dokumen mungkin belum diupload atau sedang diproses.</p>
+                                                            </div>
+                                                        `}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
