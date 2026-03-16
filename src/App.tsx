@@ -14,13 +14,14 @@ import SiteDetailPage from './presentation/pages/dashboard/sites/SiteDetailPage'
 import Sidebar from './presentation/components/layout/Sidebar';
 import Header from './presentation/components/layout/Header';
 import { authStore } from './presentation/store/auth.store';
+import { projectStore } from './presentation/store/project.store';
 import './index.css';
 
 const App: Component = () => {
   const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'ALL_SITES' | 'SITE_DETAIL' | 'PEOPLE' | 'TEAMS' | 'SYSTEM' | 'TERMIN' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN' | 'BEBAN_OPERASIONAL'>('DASHBOARD');
   const [selectedSiteId, setSelectedSiteId] = createSignal<string | null>(null);
   const [authView, setAuthView] = createSignal<'login' | 'register'>('login');
-  const [isLoggedIn, setIsLoggedIn] = createSignal(false);
+  const isLoggedIn = () => authStore.isAuthenticated();
 
   onMount(() => {
     // Check if user was previously logged in
@@ -30,7 +31,6 @@ const App: Component = () => {
       try {
         const user = JSON.parse(userStr);
         authStore.setAuth(user, true);
-        setIsLoggedIn(true);
       } catch (e) {
         // Invalid data, clear it
         localStorage.removeItem('auth_token');
@@ -44,12 +44,12 @@ const App: Component = () => {
     const authenticated = authStore.isAuthenticated();
     const currentUser = authStore.user();
     console.log('Auth state changed:', authenticated, 'User:', currentUser?.email);
-    setIsLoggedIn(authenticated);
 
     // Reset to dashboard when user logs in or changes
     if (authenticated && currentUser) {
       console.log('Resetting to DASHBOARD for user:', currentUser.email);
       setActiveTab('DASHBOARD');
+      projectStore.loadProjects(); // Trigger project load after auth
     }
   });
 

@@ -25,8 +25,8 @@ const refreshProjects = () => {
     loadProjects();
 };
 
-// Initialize on first import
-loadProjects();
+// Don't auto-load on import — wait until authenticated
+// loadProjects();
 
 export const projectStore = {
     projects,
