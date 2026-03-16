@@ -368,7 +368,7 @@ const ProjectListPage: Component<ProjectListPageProps> = (props) => {
                         '--ag-border-color': '#f1f5f9',
                         '--ag-row-hover-color': '#eff6ff',
                         '--ag-selected-row-background-color': '#dbeafe',
-                        '--ag-font-family': "'Poppins', sans-serif",
+                        '--ag-font-family': "'Plus Jakarta Sans', sans-serif",
                         '--ag-font-size': '14px',
                         '--ag-header-foreground-color': '#64748b',
                         '--ag-header-font-weight': '400',

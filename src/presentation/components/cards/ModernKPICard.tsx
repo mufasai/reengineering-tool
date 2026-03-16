@@ -4,7 +4,7 @@ export interface ModernKPICardProps {
     title: string;
     value: JSX.Element;
     subtitle?: JSX.Element;
-    icon: (props: { class?: string }) => JSX.Element;
+    icon: (props: { class?: string, strokeWidth?: number | string }) => JSX.Element;
     iconClass: string; // Tailwind classes for icon background/color e.g. "bg-orange-500 text-white"
     trend?: {
         direction: 'up' | 'down' | 'neutral';
@@ -20,7 +20,6 @@ export interface ModernKPICardProps {
     compact?: boolean;
 }
 
-// Helper for classes
 const clsx = (...classes: any[]) => classes.flat().filter(Boolean).join(' ');
 
 const ModernKPICard = (props: ModernKPICardProps) => {
@@ -32,9 +31,10 @@ const ModernKPICard = (props: ModernKPICardProps) => {
             title={props.titleTooltip}
             style={{ "min-width": `${props.minWidth ?? 180}px` }}
             class={clsx(
-                "flex items-center gap-3.5 bg-white rounded-2xl px-4 py-3.5 border-2 transition-all duration-200",
+                "flex items-center gap-3.5 bg-white rounded-2xl px-4 py-3.5",
                 "shadow-[0_2px_8px_rgba(0,0,0,0.07),0_0_1px_rgba(0,0,0,0.04)]",
-                props.isActive ? "border-blue-600/50 bg-blue-50/30" : "border-transparent",
+                "transition-all duration-200 text-left",
+                props.isActive ? "ring-2 ring-blue-500/40 bg-blue-50/30" : "",
                 props.onClick ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,0,0,0.10)]" : "cursor-default",
                 props.class
             )}
@@ -45,11 +45,11 @@ const ModernKPICard = (props: ModernKPICardProps) => {
                 "ring-[2.5px] ring-white shadow-[0_4px_14px_rgba(0,0,0,0.22)]",
                 props.iconClass
             )}>
-                <props.icon class="w-5 h-5" />
+                <props.icon class="w-5 h-5" strokeWidth={2.2} />
             </div>
 
             {/* Right side: value → trend+label */}
-            <div class="min-w-0 flex flex-col gap-0.5 text-left">
+            <div class="min-w-0 flex flex-col gap-0.5">
                 <span class="text-[22px] font-extrabold leading-none tracking-tight text-[#111827]">
                     {props.value}
                 </span>
@@ -90,8 +90,8 @@ const ModernKPICard = (props: ModernKPICardProps) => {
             title={props.titleTooltip}
             style={{ "min-width": `${props.minWidth ?? 220}px` }}
             class={clsx(
-                "group relative bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)] border-2 transition-all duration-200",
-                props.isActive ? "border-blue-600/50 bg-blue-50/20" : "border-transparent",
+                "group relative bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)] transition-all duration-200 text-left",
+                props.isActive ? "ring-1 ring-blue-500 bg-blue-50/20" : "",
                 props.onClick ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : "cursor-default",
                 props.class
             )}
@@ -102,14 +102,14 @@ const ModernKPICard = (props: ModernKPICardProps) => {
                     "shadow-[0_4px_10px_rgba(0,0,0,0.18)]",
                     props.iconClass
                 )}>
-                    <props.icon class="w-5 h-5" />
+                    <props.icon class="w-5 h-5" strokeWidth={2.5} />
                 </div>
                 <span class="text-[11px] font-semibold text-slate-400 tracking-[0.08em] uppercase truncate">
                     {props.title}
                 </span>
             </div>
 
-            <div class="mb-4 text-left">
+            <div class="mb-4">
                 <span class={clsx(
                     "font-bold leading-none",
                     typeof props.value === 'string' && props.value === '—'

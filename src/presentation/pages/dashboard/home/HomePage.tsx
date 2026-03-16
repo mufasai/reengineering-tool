@@ -1,36 +1,29 @@
-import { createSignal, createMemo, createEffect, For, Show } from 'solid-js';
+import { createSignal, createMemo, For, Show } from 'solid-js';
 import type { Component } from 'solid-js';
 import { authStore } from '../../../store/auth.store';
 import MapWidget from '../components/MapWidget';
-// We import mock data from the newly created data file
+import ModernKPICard from '../../../components/cards/ModernKPICard';
 import {
-    projects, sites, teams, workOrders, activityFeed, people,
+    sites, teams, activityFeed, people,
     filterTerms, combatTerms, siteMasterRecords, type ProjectType
 } from '../data/mockData';
 
 // --- Inline SVGs for icons ---
-const Building2 = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18ZM6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" /></svg>;
-const Users = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
-const Wallet = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" /></svg>;
-const CheckCircle2 = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>;
-const Plus = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>;
-const CreditCard = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>;
-const ChevronRight = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
-const Activity = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>;
-const Clock = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>;
-const FileText = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="16" x2="8" y1="13" y2="13" /><line x1="16" x2="8" y1="17" y2="17" /><line x1="10" x2="8" y1="9" y2="9" /></svg>;
-const UploadCloud = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="M12 12v9" /><path d="m16 16-4-4-4 4" /></svg>;
-const AlertCircle = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>;
-const MapPin = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>;
+const Building2 = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={p.strokeWidth || "2"} stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18ZM6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" /></svg>;
+const Wallet = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={p.strokeWidth || "2"} stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" /></svg>;
+const CheckCircle2 = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={p.strokeWidth || "2"} stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>;
+const CreditCard = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={p.strokeWidth || "2"} stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>;
+const Activity = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={p.strokeWidth || "2"} stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>;
+const Clock = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={p.strokeWidth || "2"} stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>;
+const MapPin = (p: any) => <svg xmlns="http://www.w3.org/2000/svg" class={p.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={p.strokeWidth || "2"} stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>;
 
-// Simple utility to format classes
 const clsx = (...classes: any[]) => classes.flat().filter(Boolean).join(' ');
 
-
-
+// Helper to format currency
 const formatRupiah = (amount: number) => {
-    if (amount >= 1000000000) return `Rp ${(amount / 1000000000).toFixed(1)}B`;
-    if (amount >= 1000000) return `Rp ${(amount / 1000000).toFixed(0)}Jt`;
+    if (amount == null || isNaN(amount)) return 'Rp 0';
+    if (amount >= 1e9) return `Rp ${(amount / 1e9).toFixed(1)}B`;
+    if (amount >= 1e6) return `Rp ${(amount / 1e6).toFixed(0)}Jt`;
     return `Rp ${amount.toLocaleString('id-ID')}`;
 };
 
@@ -44,90 +37,25 @@ const HomePage: Component<HomePageProps> = (props) => {
     const [activeTab, setActiveTab] = createSignal<'overview' | 'map'>('overview');
     const [mapStageFilter, setMapStageFilter] = createSignal<string | undefined>();
 
-
+    // ----------------------------------------------------------------------
+    // 1. VISIBLE SITES
+    // ----------------------------------------------------------------------
     const visibleSites = createMemo(() => {
         const u = user();
         const role = u.role.toLowerCase().replace(/_/g, ' ');
         const isRestricted = ['engineer', 'team leader'].includes(role);
         if (!isRestricted) return sites;
-
+        
         const userTeamIds = teams
             .filter(t => t.members.some(m => m.personId === u.id))
             .map(t => t.id);
-
+            
         return sites.filter(s => s.teamId && userTeamIds.includes(s.teamId));
     });
 
-    const activeProjects = createMemo(() => {
-        const vs = visibleSites();
-        const visibleProjectIds = new Set(vs.map(s => s.projectId));
-        return projects.filter(p => p.status === 'active' && visibleProjectIds.has(p.id));
-    });
-
-    const totalBudget = createMemo(() => activeProjects().reduce((sum, p) => sum + (p.budget || 0), 0));
-
-    const budgetTerpakai = createMemo(() => {
-        let paid = 0;
-        filterTerms.forEach(t => { if (t.status === 'paid') paid += (t.amountPaid || 0); });
-        combatTerms.forEach(t => {
-            t.subSteps.forEach(s => { if (s.status === 'paid') paid += (s.amountPaid || 0); });
-        });
-        return paid;
-    });
-
-    const sisaBudget = () => totalBudget() - budgetTerpakai();
-    const terpakaiPercent = () => totalBudget() > 0 ? (budgetTerpakai() / totalBudget()) * 100 : 0;
-    const sisaPercent = () => totalBudget() > 0 ? (sisaBudget() / totalBudget()) * 100 : 0;
-
-    const pendingApprovals = createMemo(() => {
-        let count = 0;
-        let amount = 0;
-        filterTerms.forEach(t => {
-            if (t.status === 'pengajuan') { count++; amount += (t.amountRequest || 0); }
-        });
-        combatTerms.forEach(t => {
-            t.subSteps.forEach(s => {
-                if (s.status === 'pengajuan') { count++; amount += (s.amountRequest || 0); }
-            });
-        });
-        return { count, amount };
-    });
-
-    const avgProgress = createMemo(() => {
-        if (sites.length === 0) return 0;
-        let totalPct = 0;
-        sites.forEach(s => {
-            const p = projects.find(proj => proj.id === s.projectId);
-            if (p?.type === 'FILTER') {
-                let pct = 0;
-                filterTerms.filter(t => t.siteId === s.id && t.status === 'paid').forEach(t => pct += t.percentage);
-                totalPct += pct;
-            } else if (p?.type === 'COMBAT') {
-                const sTerms = combatTerms.filter(t => t.siteId === s.id);
-                const max = sTerms.reduce((sum, t) => sum + t.totalMaxAmount, 0);
-                if (max > 0) {
-                    let paid = 0;
-                    sTerms.forEach(t => t.subSteps.forEach(sub => { if (sub.status === 'paid') paid += (sub.amountPaid || 0); }));
-                    totalPct += (paid / max) * 100;
-                }
-            }
-        });
-        return Math.round(totalPct / sites.length);
-    });
-
-    const completedSitesCount = createMemo(() => {
-        const vs = visibleSites();
-        const ap = activeProjects();
-        return vs.filter(s => {
-            const p = ap.find(proj => proj.id === s.projectId);
-            if (p?.type === 'FILTER') {
-                return filterTerms.filter(t => t.siteId === s.id && t.status === 'paid').reduce((acc, t) => acc + t.percentage, 0) >= 100;
-            }
-            return false;
-        }).length;
-    });
-    const activeSitesCount = () => visibleSites().length - completedSitesCount();
-
+    // ----------------------------------------------------------------------
+    // 2. STATUS LAPANGAN (STAGES SUMMARY FROM siteMasterRecords)
+    // ----------------------------------------------------------------------
     const stageSummary = createMemo(() => {
         let menungguPermit = 0;
         let permitReady = 0;
@@ -138,7 +66,6 @@ const HomePage: Component<HomePageProps> = (props) => {
 
         siteMasterRecords.forEach(master => {
             const stage = master.stage || 'imported';
-
             if (stage === 'permit_process') menungguPermit++;
             else if (stage === 'permit_ready') permitReady++;
             else if (stage === 'akses_ready') aksesReady++;
@@ -149,369 +76,170 @@ const HomePage: Component<HomePageProps> = (props) => {
                 issues++;
             }
         });
-
         return { menungguPermit, permitReady, aksesReady, implementasi, issues, selesai, total: siteMasterRecords.length };
     });
 
-    const projectTypesList: { id: ProjectType; label: string; color: string; border: string; bg: string }[] = [
-        { id: 'BLACKSITE', label: 'Blacksite', color: 'text-red-600', border: 'border-red-200', bg: 'bg-red-50' },
-        { id: 'COMBAT', label: 'Combat', color: 'text-orange-600', border: 'border-orange-200', bg: 'bg-orange-50' },
-        { id: 'FILTER', label: 'Filter', color: 'text-emerald-600', border: 'border-emerald-200', bg: 'bg-emerald-50' },
-        { id: 'L2H', label: 'L2H', color: 'text-blue-600', border: 'border-blue-200', bg: 'bg-blue-50' },
-        { id: 'REFINEN', label: 'Refinen', color: 'text-purple-600', border: 'border-purple-200', bg: 'bg-purple-50' }
+    // ----------------------------------------------------------------------
+    // 3. FINANCIAL SUMMARY
+    // ----------------------------------------------------------------------
+    const financials = createMemo(() => {
+        let totalHarga = 0;
+        let terminTerbayar = 0;
+        let menungguApprovalCount = 0;
+        
+        // Sum total harga across active sites (from site master)
+        const vs = visibleSites();
+        vs.forEach(s => {
+            const master = siteMasterRecords.find(m => m.site_id === s.id);
+            if (master) {
+                totalHarga += (master as any).nilai_kontrak || (master as any).budget || 0;
+            }
+        });
+
+        // Paid & Submitted 
+        filterTerms.forEach(t => { 
+            if (t.status === 'paid' || t.status === 'dibayarkan') terminTerbayar += (t.amountPaid || t.amountRequest || 0);
+            if (['pengajuan', 'submitted', 'pending_review', 'pending'].includes(t.status)) menungguApprovalCount++;
+        });
+        combatTerms.forEach(t => {
+            t.subSteps.forEach(s => { 
+                if (s.status === 'paid' || s.status === 'dibayarkan') terminTerbayar += (s.amountPaid || s.amountRequest || 0); 
+                if (['pengajuan', 'submitted', 'pending_review', 'pending'].includes(s.status)) menungguApprovalCount++;
+            });
+        });
+
+        const sisaTagih = totalHarga > 0 ? totalHarga - terminTerbayar : 0;
+        const pctTerbayar = totalHarga > 0 ? ((terminTerbayar / totalHarga) * 100).toFixed(1) : '0.0';
+
+        return { totalHarga, terminTerbayar, menungguApprovalCount, sisaTagih, pctTerbayar };
+    });
+
+    // ----------------------------------------------------------------------
+    // 4. PROJECT TYPE SUMMARY
+    // ----------------------------------------------------------------------
+    const projectTypes: { id: ProjectType; label: string; color: string; bg: string }[] = [
+        { id: 'BLACKSITE', label: 'Blacksite', color: 'text-[#DC2626]', bg: 'bg-red-50' },
+        { id: 'COMBAT', label: 'Combat', color: 'text-[#EA580C]', bg: 'bg-orange-50' },
+        { id: 'FILTER', label: 'Filter', color: 'text-[#16A34A]', bg: 'bg-green-50' },
+        { id: 'L2H', label: 'L2H', color: 'text-[#2563EB]', bg: 'bg-blue-50' },
+        { id: 'REFINEN', label: 'Refinen', color: 'text-[#7C3AED]', bg: 'bg-purple-50' }
     ];
 
     const getTypeSummary = (type: ProjectType) => {
         const typeMasterSites = siteMasterRecords.filter(sm => sm.project_type === type);
         const importedCount = typeMasterSites.length;
 
-        const vs = visibleSites();
-        const ap = activeProjects();
-        const typeSites = vs.filter(s => {
-            const p = ap.find(proj => proj.id === s.projectId);
-            return p?.type === type;
+        let awal = 0;
+        let permit = 0;
+        let akses = 0;
+        let impl = 0;
+        let selesai = 0;
+        typeMasterSites.forEach(s => {
+           const st = s.stage as string;
+           if (['imported', 'assigned'].includes(st)) awal++;
+           else if (['permit_process', 'permit_ready'].includes(st)) permit++;
+           else if (['akses_process', 'akses_ready'].includes(st)) akses++;
+           else if (['implementasi', 'rfi_done', 'rfs_done', 'dokumen_done', 'bast', 'invoice'].includes(st)) impl++;
+           else if (st === 'completed') selesai++;
         });
-        const activeCount = typeSites.length;
-        const budget = typeSites.reduce((sum, s) => sum + s.budget, 0);
 
-        return { importedCount, activeCount, budget };
+        return { importedCount, awal, permit, akses, impl, selesai };
     };
 
+    // ----------------------------------------------------------------------
+    // 5. LEFT COLUMN: BUTUH TINDAKAN SEGERA
+    // ----------------------------------------------------------------------
     const actionNeededList = createMemo(() => {
         let items: any[] = [];
-        const vs = visibleSites();
-        const ap = activeProjects();
-
-        filterTerms.forEach(t => {
-            if (!vs.find(s => s.id === t.siteId)) return;
-
-            if (t.status === 'pengajuan') {
-                const site = vs.find(s => s.id === t.siteId);
-                const proj = ap.find(p => p.id === site?.projectId);
+        siteMasterRecords.forEach(s => {
+            const daysDiff = s.stage_updated_at ? Math.floor((Date.now() - new Date(s.stage_updated_at).getTime()) / 86400000) : 0;
+            if (daysDiff > 14 || (s.stage as string) === 'issue_hold' || s.stage_notes?.toLowerCase().includes('issue')) {
                 items.push({
-                    id: t.id,
-                    siteName: site?.name || 'Unknown',
-                    type: proj?.type || 'FILTER',
-                    title: t.name,
-                    statusText: 'Menunggu Review',
-                    reqRole: 'management',
-                    link: `/sites/${t.siteId}/termins/${t.id}/review`,
-                    btnText: 'Review →',
-                    btnClass: 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                    id: s.site_id,
+                    siteName: s.site_name,
+                    type: s.project_type,
+                    title: s.stage_notes || `${s.stage?.replace('_', ' ')} > 14 hari`,
+                    link: `/all-sites` // Handled by onTabChange in Solid
                 });
-            } else if (t.status === 'approved') {
-                const site = vs.find(s => s.id === t.siteId);
-                const proj = ap.find(p => p.id === site?.projectId);
-                items.push({
-                    id: t.id,
-                    siteName: site?.name || 'Unknown',
-                    type: proj?.type || 'FILTER',
-                    title: t.name,
-                    statusText: 'Menunggu Pembayaran',
-                    reqRole: 'finance',
-                    link: `/sites/${t.siteId}/termins/${t.id}/payment`,
-                    btnText: 'Bayar →',
-                    btnClass: 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
-                });
-            } else if (t.status === 'pending') {
-                const site = vs.find(s => s.id === t.siteId);
-                const proj = ap.find(p => p.id === site?.projectId);
-                if (t.step === 1 || filterTerms.find(prev => prev.siteId === t.siteId && prev.step === t.step - 1 && prev.status === 'paid')) {
-                    items.push({
-                        id: t.id,
-                        siteName: site?.name || 'Unknown',
-                        type: proj?.type || 'FILTER',
-                        title: t.name,
-                        statusText: 'Siap Diajukan',
-                        reqRole: 'team leader',
-                        link: `/sites/${t.siteId}/termins/create`,
-                        btnText: 'Submit →',
-                        btnClass: 'text-blue-600 bg-blue-50 hover:bg-blue-100'
-                    });
-                }
             }
         });
-
-        let visibleItems = items;
-        const uRole = user().role.toLowerCase().replace(/_/g, ' ');
-        if (uRole === 'management' || uRole === 'backoffice_admin') {
-            visibleItems = items.filter(i => i.reqRole === 'management');
-        } else if (uRole === 'finance') {
-            visibleItems = items.filter(i => i.reqRole === 'finance');
-        } else if (uRole === 'team_leader') {
-            visibleItems = items.filter(i => i.reqRole === 'team leader');
-        } else if (uRole === 'engineer') {
-            visibleItems = [];
-        }
-
-        return visibleItems.slice(0, 5);
+        return items.slice(0, 5);
     });
 
-    const getBadgeClass = (type: ProjectType) => {
-        const conf = projectTypesList.find(p => p.id === type);
-        return conf ? `${conf.bg} ${conf.color} border-${conf.border}` : 'bg-slate-100 text-slate-600';
-    };
+    // ----------------------------------------------------------------------
+    // 6. RIGHT COLUMN: PENGAJUAN MENUNGGU APPROVAL
+    // ----------------------------------------------------------------------
+    const pendingPengajuanList = createMemo(() => {
+        let list: any[] = [];
+        filterTerms.forEach(t => {
+            if (['pengajuan', 'submitted', 'pending_review', 'pending'].includes(t.status)) {
+                 const site = sites.find(s => s.id === t.siteId);
+                 list.push({
+                     id: t.id,
+                     siteId: t.siteId,
+                     siteName: site?.name || siteMasterRecords.find(sm => sm.site_id === t.siteId)?.site_name || t.siteId,
+                     title: t.name,
+                     amount: t.amountRequest || 0,
+                     date: (t as any).submittedAt || new Date().toISOString(),
+                 });
+            }
+        });
+        combatTerms.forEach(t => {
+            t.subSteps.forEach(s => {
+                if (['pengajuan', 'submitted', 'pending_review', 'pending'].includes(s.status)) {
+                    const site = sites.find(st => st.id === t.siteId);
+                    list.push({
+                        id: s.id,
+                        siteId: t.siteId,
+                        siteName: site?.name || siteMasterRecords.find(sm => sm.site_id === t.siteId)?.site_name || t.siteId,
+                        title: `${(s as any).stepName} (${(s as any).percentage}%)`,
+                        status: 'pending_review',
+                        date: (s as any).submittedAt || new Date().toISOString(),
+                    });
+                }
+            });
+        });
+        list.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return list;
+    });
 
     return (
-        <div class="space-y-6 pb-16 min-h-screen">
-            {/* SECTION 1: PAGE HEADER & QUICK ACTION BAR */}
-            <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 class="text-xl font-bold text-slate-800">Dashboard</h1>
-                        <p class="text-slate-500 mt-1">Selamat datang kembali, <span class="font-semibold text-slate-700">{user().name}</span> 👋</p>
+        <div class="space-y-6 pb-16 animate-in fade-in duration-300">
+            {/* ROW 1: HEADER (compact, no greeting) */}
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <h1 class="text-[32px] font-bold text-[#111827] tracking-tight">Dashboard</h1>
+                
+                <div class="flex items-center gap-3">
+                    <div class="text-right">
+                        <p class="text-[13px] text-[#6B7280]">{new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
-                    <div class="flex items-center gap-3 text-sm">
-                        <div class="text-slate-500 text-right">
-                            <p class="font-medium text-slate-700">{new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            <p class="capitalize">{user().role.replace(/_/g, ' ')}</p>
-                        </div>
-                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
-                            {user().name.charAt(0)}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Quick Action Bar (Role Sensitive) */}
-                <div class="bg-slate-50 border-t border-slate-200 px-6 py-3 flex gap-3 overflow-x-auto">
-                    <Show when={['management', 'backoffice_admin'].includes(user().role)}>
-                        <button onClick={() => props.onTabChange?.('WO')} class="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">
-                            <Plus class="w-4 h-4 text-blue-600" /> Input WO
-                        </button>
-                        <button onClick={() => props.onTabChange?.('PROJECTS')} class="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">
-                            <Plus class="w-4 h-4 text-emerald-600" /> Tambah Project
-                        </button>
-                    </Show>
-                    <Show when={user().role === 'team_leader' || user().role === 'team leader'}>
-                        <button class="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">
-                            <FileText class="w-4 h-4 text-amber-600" /> Ajukan Termin
-                        </button>
-                        <button class="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">
-                            <CheckCircle2 class="w-4 h-4 text-blue-600" /> Buat SKP
-                        </button>
-                    </Show>
-                    <Show when={user().role === 'finance'}>
-                        <button class="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">
-                            <CreditCard class="w-4 h-4 text-emerald-600" /> Proses Pembayaran
-                        </button>
-                    </Show>
-                    <Show when={user().role === 'engineer'}>
-                        <button class="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap">
-                            <UploadCloud class="w-4 h-4 text-blue-600" /> Upload Evidence
-                        </button>
-                    </Show>
-                </div>
-            </div>
-
-            {/* SECTION 2: FINANCIAL KPI ROW */}
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {/* 1. Total Budget */}
-                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-                    <div class="flex items-center justify-between relative z-10">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Budget</span>
-                        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 transition-transform group-hover:scale-110">
-                            <Wallet class="w-5 h-5" />
-                        </div>
-                    </div>
-                    <div class="relative z-10 mt-auto">
-                        <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{formatRupiah(totalBudget())}</div>
-                        <div class="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                            {activeProjects().length} Proyek Aktif
-                        </div>
-                    </div>
-                </div>
-
-                {/* 2. Budget Terpakai */}
-                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-                    <div class="flex items-center justify-between relative z-10">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Terpakai</span>
-                        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 transition-transform group-hover:scale-110">
-                            <CreditCard class="w-5 h-5" />
-                        </div>
-                    </div>
-                    <div class="relative z-10 mt-auto space-y-2">
-                        <div>
-                            <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{formatRupiah(budgetTerpakai())}</div>
-                            <div class="text-[11px] text-slate-400 mt-1.5">{terpakaiPercent().toFixed(1)}% dari total</div>
-                        </div>
-                        <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div class="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(terpakaiPercent(), 100)}%` }}></div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 3. Sisa Budget */}
-                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-                    <div class="flex items-center justify-between relative z-10">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sisa Budget</span>
-                        <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 transition-transform group-hover:scale-110">
-                            <CheckCircle2 class="w-5 h-5" />
-                        </div>
-                    </div>
-                    <div class="relative z-10 mt-auto">
-                        <div class="flex items-baseline gap-2">
-                            <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{formatRupiah(sisaBudget())}</div>
-                        </div>
-                        <div class="text-[11px] text-emerald-600 font-medium mt-1.5">Tersedia untuk termin</div>
-                    </div>
-                </div>
-
-                {/* 4. Menunggu Approval */}
-                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden group">
-                    <div class="flex items-center justify-between relative z-10">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Approval</span>
-                        <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 transition-transform group-hover:scale-110">
-                            <Clock class="w-5 h-5" />
-                        </div>
-                    </div>
-                    <div class="relative z-10 mt-auto">
-                        <div class="flex items-center gap-2">
-                            <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{pendingApprovals().count}</div>
-                            <span class="text-xs font-bold text-slate-400 uppercase">Pengajuan</span>
-                        </div>
-                        <div class="text-[11px] text-orange-600 font-medium mt-1.5 flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
-                            {formatRupiah(pendingApprovals().amount)} Pending
-                        </div>
-                    </div>
-                </div>
-
-                {/* 5. Rata-rata Progress */}
-                <div class="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between h-[120px] shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-                    <div class="flex items-center justify-between relative z-10">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Progress</span>
-                        <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 transition-transform group-hover:scale-110">
-                            <Activity class="w-5 h-5" />
-                        </div>
-                    </div>
-                    <div class="flex items-end justify-between relative z-10 mt-auto">
-                        <div>
-                            <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">{avgProgress()}%</div>
-                            <div class="text-[11px] text-slate-400 mt-1.5">{activeSitesCount()} sites active</div>
-                        </div>
+                    <div class="px-3 py-1 bg-[#EFF6FF] text-[#1D4ED8] text-[11px] rounded-full uppercase font-semibold tracking-wider">
+                        {user().role.replace(/_/g, ' ')}
                     </div>
                 </div>
             </div>
 
-            {/* SECTION 2.5: TAB 1 STAGE SUMMARY (site_master) */}
-            <Show when={activeTab() === 'overview'}>
-                <div class="mb-6">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2 flex items-center gap-2">
-                        <MapPin class="w-4 h-4 text-emerald-500" />
-                        Status Lapangan <span class="text-xs font-normal text-slate-500">({stageSummary().total} Total Records)</span>
-                    </h3>
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                        <div onClick={() => { setActiveTab('map'); setMapStageFilter('permit_process'); }} class="bg-white border border-slate-200 rounded-lg p-3 flex flex-col justify-center items-center h-[70px] shadow-sm cursor-pointer hover:border-slate-300 hover:bg-slate-50 transition-colors">
-                            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1 text-center leading-tight hover:underline">Menunggu<br />Permit</span>
-                            <span class="text-lg font-bold text-slate-700">{stageSummary().menungguPermit}</span>
-                        </div>
-                        <div onClick={() => { setActiveTab('map'); setMapStageFilter('permit_ready'); }} class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex flex-col justify-center items-center h-[70px] shadow-sm cursor-pointer hover:border-emerald-300 hover:bg-emerald-100/50 transition-colors">
-                            <span class="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider mb-1 text-center leading-tight hover:underline">Permit<br />Ready</span>
-                            <span class="text-lg font-bold text-emerald-700">{stageSummary().permitReady}</span>
-                        </div>
-                        <div onClick={() => { setActiveTab('map'); setMapStageFilter('akses_ready'); }} class="bg-blue-50 border border-blue-200 rounded-lg p-3 flex flex-col justify-center items-center h-[70px] shadow-sm cursor-pointer hover:border-blue-300 hover:bg-blue-100/50 transition-colors">
-                            <span class="text-[10px] font-semibold text-blue-600 uppercase tracking-wider mb-1 text-center leading-tight hover:underline">Akses<br />Ready</span>
-                            <span class="text-lg font-bold text-blue-700">{stageSummary().aksesReady}</span>
-                        </div>
-                        <div onClick={() => { setActiveTab('map'); setMapStageFilter('implementasi'); }} class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 flex flex-col justify-center items-center h-[70px] shadow-sm cursor-pointer hover:border-indigo-300 hover:bg-indigo-100/50 transition-colors">
-                            <span class="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider mb-1 hover:underline">Implementasi</span>
-                            <span class="text-lg font-bold text-indigo-700">{stageSummary().implementasi}</span>
-                        </div>
-                        <div onClick={() => { setActiveTab('map'); setMapStageFilter('issue_hold'); }} class="bg-amber-50 border border-amber-200 rounded-lg p-3 flex flex-col justify-center items-center h-[70px] shadow-sm relative overflow-hidden group cursor-pointer hover:border-amber-400 hover:bg-amber-100/50 transition-colors">
-                            <Show when={stageSummary().issues > 0}>
-                                <div class="absolute inset-0 bg-red-100/50 animate-pulse mix-blend-multiply pointer-events-none"></div>
-                            </Show>
-                            <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1 flex items-center gap-1 relative z-10 pointer-events-none group-hover:underline">
-                                Issue
-                            </span>
-                            <span class="text-lg font-bold text-amber-700 relative z-10 pointer-events-none">{stageSummary().issues}</span>
-                        </div>
-                        <div onClick={() => { setActiveTab('map'); setMapStageFilter('completed'); }} class="bg-emerald-500 border border-emerald-600 rounded-lg p-3 flex flex-col justify-center items-center h-[70px] shadow-sm text-white relative cursor-pointer hover:bg-emerald-600 transition-colors group">
-                            <span class="text-[10px] font-semibold text-emerald-100 uppercase tracking-wider mb-1 pointer-events-none group-hover:underline">Selesai</span>
-                            <span class="text-lg font-bold text-white pointer-events-none">{stageSummary().selesai}</span>
-                            <CheckCircle2 class="w-8 h-8 absolute -right-2 -bottom-2 text-white/20 pointer-events-none" />
-                        </div>
-                    </div>
-                </div>
-            </Show>
-
-            {/* SECTION 3: TAB 1 STRIP & OVERVIEW PER TIPE (site_master driven) */}
-            <Show when={activeTab() === 'overview'}>
-                {/* STRIP */}
-                <div class="bg-slate-50 border border-slate-200 rounded-md px-4 py-2 flex items-center gap-4 text-sm font-medium text-slate-600 overflow-x-auto shadow-sm backdrop-blur-sm mb-6">
-                    <div class="flex items-center gap-2 whitespace-nowrap px-3 py-1 bg-white rounded-md border border-slate-200 shadow-sm">
-                        <Users class="w-4 h-4 text-coral-500" />
-                        <span class="font-bold text-slate-800">{teams.length}</span> Teams Active
-                    </div>
-                </div>
-
-                {/* OVERVIEW PER TIPE ROW */}
-                <div>
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2 flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <Activity class="w-4 h-4 text-blue-500" />
-                            Overview per Tipe
-                        </div>
-                        <span class="text-xs font-normal text-slate-500 hover:text-blue-600 cursor-pointer flex items-center">
-                            Lihat Semua Tipe <ChevronRight class="w-3 h-3 ml-1" />
-                        </span>
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        <For each={projectTypesList}>
-                            {(t) => {
-                                const summary = getTypeSummary(t.id);
-                                return (
-                                    <div onClick={() => props.onTabChange?.(t.id)} class="cursor-pointer bg-white border text-left border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all hover:border-blue-300 group flex flex-col justify-between h-[120px]">
-                                        <div>
-                                            <div class="flex justify-between items-start mb-2">
-                                                <span class="text-xs font-bold text-slate-500 tracking-wider">TIPE</span>
-                                                <span class={clsx("w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-110 group-hover:rotate-3", t.bg, t.color)}>
-                                                    <Building2 class="w-4 h-4" />
-                                                </span>
-                                            </div>
-                                            <h4 class="text-lg font-black text-slate-800">{t.label}</h4>
-                                        </div>
-                                        <div class="flex items-center gap-2 mt-2">
-                                            <div class="bg-slate-100 px-2 py-1 rounded text-[10px] font-bold text-slate-600 border border-slate-200">
-                                                {summary.importedCount} Master
-                                            </div>
-                                            <Show when={summary.activeCount > 0}>
-                                                <div class="bg-blue-50 px-2 py-1 rounded text-[10px] font-bold text-blue-600 border border-blue-200 flex items-center gap-1 shrink-0">
-                                                    <span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-                                                    {summary.activeCount} Aktif
-                                                </div>
-                                            </Show>
-                                        </div>
-                                    </div>
-                                );
-                            }}
-                        </For>
-                    </div>
-                </div>
-            </Show>
-
-            {/* SECTION 5: DASHBOARD TABS */}
-            <div class="flex bg-slate-900 border-b-2 border-slate-800 text-slate-300 px-6 pt-1 sticky top-16 z-30 shadow-md">
+            {/* TABS (Directly under header) */}
+            <div class="flex border-b border-slate-200 mt-2">
                 <button
-                    onClick={() => setActiveTab('overview')}
+                    onClick={() => { setActiveTab('overview'); setMapStageFilter(undefined); }}
                     class={clsx(
-                        "px-6 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 -mb-[2px]",
+                        "px-6 py-3 font-semibold text-sm transition-all flex items-center gap-2",
                         activeTab() === 'overview'
-                            ? 'border-blue-400 text-white bg-slate-800/50 rounded-t-lg'
-                            : 'border-transparent hover:text-white hover:bg-slate-800/30 rounded-t-lg'
+                        ? 'bg-white shadow-sm text-[#1D4ED8] border-b-2 border-[#2563EB]'
+                        : 'text-[#6B7280] hover:text-gray-900 border-b-2 border-transparent'
                     )}
                 >
-                    <Building2 class="w-4 h-4" />
+                    <Activity class="w-4 h-4" />
                     Overview
                 </button>
                 <button
                     onClick={() => setActiveTab('map')}
                     class={clsx(
-                        "px-6 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 -mb-[2px]",
+                        "px-6 py-3 font-semibold text-sm transition-all flex items-center gap-2",
                         activeTab() === 'map'
-                            ? 'border-blue-400 text-white bg-slate-800/50 rounded-t-lg'
-                            : 'border-transparent hover:text-white hover:bg-slate-800/30 rounded-t-lg'
+                        ? 'bg-white shadow-sm text-[#1D4ED8] border-b-2 border-[#2563EB]'
+                        : 'text-[#6B7280] hover:text-gray-900 border-b-2 border-transparent'
                     )}
                 >
                     <MapPin class="w-4 h-4" />
@@ -521,189 +249,313 @@ const HomePage: Component<HomePageProps> = (props) => {
 
             {/* TAB CONTENT: PETA SITES */}
             <Show when={activeTab() === 'map'}>
-                <div class="h-[calc(100vh-140px)] w-full relative -mx-6 -mb-16 -mt-6">
-                    <MapWidget
-                        height="100%"
-                        presetStage={mapStageFilter()}
+                <div class="h-[calc(100vh-200px)] w-full relative -mx-0 rounded-lg overflow-hidden border border-slate-200 mt-6">
+                    <MapWidget 
+                        height="100%" 
+                        presetStage={mapStageFilter()} 
                     />
                 </div>
             </Show>
 
             {/* TAB CONTENT: OVERVIEW */}
             <Show when={activeTab() === 'overview'}>
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-300">
-
-                    {/* LEFT COLUMN (60%) */}
-                    <div class="lg:col-span-7 space-y-6">
-                        {/* Action Needed */}
-                        <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
-                            <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                                <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                                    <AlertCircle class="w-4 h-4 text-red-500" />
-                                    Butuh Tindakan Segera
-                                </h3>
-                                <Show when={actionNeededList().length > 0}>
-                                    <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{actionNeededList().length} Tasks</span>
-                                </Show>
+                <div class="space-y-8 animate-in fade-in duration-300 mt-6">
+                    
+                    {/* ROW 1: STATUS LAPANGAN */}
+                    <div>
+                        <h3 class="text-[11px] font-semibold text-[#9CA3AF] tracking-[0.08em] uppercase mb-4">
+                            Status Lapangan
+                        </h3>
+                        <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
+                            {/* Menunggu Permit — slate/gray gradient */}
+                            <div onClick={() => { setActiveTab('map'); setMapStageFilter('permit_process'); }}
+                                class="relative rounded-xl p-4 cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                                style={{ background: 'linear-gradient(135deg, #64748B 0%, #475569 100%)', 'box-shadow': '0 4px 14px rgba(71,85,105,0.35)' }}>
+                                <div class="absolute -right-2 -bottom-2 text-white/10 text-[64px] font-black leading-none select-none pointer-events-none">{stageSummary().menungguPermit}</div>
+                                <p class="text-white/70 text-[10px] font-semibold uppercase tracking-[0.07em] mb-2 leading-tight">Menunggu<br/>Permit</p>
+                                <p class="text-white text-[32px] font-black leading-none">{stageSummary().menungguPermit}</p>
                             </div>
-                            <div class="divide-y divide-slate-100">
-                                <Show when={actionNeededList().length === 0} fallback={
-                                    <For each={actionNeededList()}>
-                                        {(item) => (
-                                            <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                                                <div>
-                                                    <div class="flex items-center gap-2 mb-1">
-                                                        <span class={clsx("text-[9px] font-bold px-1.5 py-0.5 rounded uppercase", getBadgeClass(item.type))}>{item.type}</span>
-                                                        <span class="font-semibold text-slate-800 text-sm">{item.siteName}</span>
-                                                        <span class="text-slate-400 text-xs px-2">·</span>
-                                                        <span class="text-slate-600 text-sm font-medium">{item.title}</span>
-                                                    </div>
-                                                    <div class="text-xs text-slate-500 flex items-center gap-1">
-                                                        <Clock class="w-3 h-3 text-amber-500" /> {item.statusText}
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => props.onTabChange?.('TERMIN')}
-                                                    class={clsx("px-3 py-1.5 rounded text-xs font-bold transition-colors whitespace-nowrap", item.btnClass)}
-                                                >
-                                                    {item.btnText}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </For>
-                                }>
-                                    <div class="p-6 text-center text-sm text-slate-500 italic">
-                                        Tidak ada tugas yang membutuhkan tindakan Anda saat ini.
-                                    </div>
-                                </Show>
+                            {/* Permit Ready — amber/orange gradient */}
+                            <div onClick={() => { setActiveTab('map'); setMapStageFilter('permit_ready'); }}
+                                class="relative rounded-xl p-4 cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                                style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', 'box-shadow': '0 4px 14px rgba(245,158,11,0.4)' }}>
+                                <div class="absolute -right-2 -bottom-2 text-white/10 text-[64px] font-black leading-none select-none pointer-events-none">{stageSummary().permitReady}</div>
+                                <p class="text-white/80 text-[10px] font-semibold uppercase tracking-[0.07em] mb-2 leading-tight">Permit<br/>Ready</p>
+                                <p class="text-white text-[32px] font-black leading-none">{stageSummary().permitReady}</p>
                             </div>
-                        </div>
-
-                        {/* Recent Activity Feed */}
-                        <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
-                            <div class="px-4 py-3 border-b border-slate-100">
-                                <h3 class="font-bold text-slate-800">Aktivitas Terbaru</h3>
+                            {/* Akses Ready — blue gradient */}
+                            <div onClick={() => { setActiveTab('map'); setMapStageFilter('akses_ready'); }}
+                                class="relative rounded-xl p-4 cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                                style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', 'box-shadow': '0 4px 14px rgba(59,130,246,0.4)' }}>
+                                <div class="absolute -right-2 -bottom-2 text-white/10 text-[64px] font-black leading-none select-none pointer-events-none">{stageSummary().aksesReady}</div>
+                                <p class="text-white/80 text-[10px] font-semibold uppercase tracking-[0.07em] mb-2 leading-tight">Akses<br/>Ready</p>
+                                <p class="text-white text-[32px] font-black leading-none">{stageSummary().aksesReady}</p>
                             </div>
-                            <div class="p-4">
-                                <ul class="space-y-4">
-                                    <For each={activityFeed}>
-                                        {(log) => {
-                                            const u = people.find(p => p.id === log.userId);
-                                            const initial = u ? u.name.charAt(0) : '?';
-                                            return (
-                                                <li class="flex gap-3 text-sm border-b border-slate-50 pb-3 last:border-0 last:pb-0">
-                                                    <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-bold shrink-0">
-                                                        {initial}
-                                                    </div>
-                                                    <div class="flex-1">
-                                                        <div>
-                                                            <span class="font-semibold text-slate-800">{u?.name || 'Unknown'}</span>{' '}
-                                                            <span class="text-slate-600">{log.action}</span>
-                                                            {' · '}
-                                                            <span class="font-medium text-slate-700">{log.target}</span>
-                                                        </div>
-                                                        <div class="text-xs text-slate-400 mt-0.5">{log.timestamp}</div>
-                                                    </div>
-                                                </li>
-                                            );
-                                        }}
-                                    </For>
-                                </ul>
+                            {/* Implementasi — violet/purple gradient */}
+                            <div onClick={() => { setActiveTab('map'); setMapStageFilter('implementasi'); }}
+                                class="relative rounded-xl p-4 cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                                style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)', 'box-shadow': '0 4px 14px rgba(139,92,246,0.4)' }}>
+                                <div class="absolute -right-2 -bottom-2 text-white/10 text-[64px] font-black leading-none select-none pointer-events-none">{stageSummary().implementasi}</div>
+                                <p class="text-white/80 text-[10px] font-semibold uppercase tracking-[0.07em] mb-2 leading-tight">Imple-<br/>mentasi</p>
+                                <p class="text-white text-[32px] font-black leading-none">{stageSummary().implementasi}</p>
+                            </div>
+                            {/* Issue — red/rose gradient */}
+                            <div onClick={() => { setActiveTab('map'); setMapStageFilter('issue_hold'); }}
+                                class="relative rounded-xl p-4 cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                                style={{ background: 'linear-gradient(135deg, #F87171 0%, #DC2626 100%)', 'box-shadow': '0 4px 14px rgba(239,68,68,0.4)' }}>
+                                <div class="absolute -right-2 -bottom-2 text-white/10 text-[64px] font-black leading-none select-none pointer-events-none">{stageSummary().issues}</div>
+                                <p class="text-white/80 text-[10px] font-semibold uppercase tracking-[0.07em] mb-2 leading-tight">Issue<br/>⚡ Hold</p>
+                                <p class="text-white text-[32px] font-black leading-none">{stageSummary().issues}</p>
+                            </div>
+                            {/* Selesai — emerald green gradient */}
+                            <div onClick={() => { setActiveTab('map'); setMapStageFilter('completed'); }}
+                                class="relative rounded-xl p-4 cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                                style={{ background: 'linear-gradient(135deg, #34D399 0%, #059669 100%)', 'box-shadow': '0 4px 14px rgba(16,185,129,0.4)' }}>
+                                <div class="absolute -right-2 -bottom-2 text-white/10 text-[64px] font-black leading-none select-none pointer-events-none">{stageSummary().selesai}</div>
+                                <p class="text-white/80 text-[10px] font-semibold uppercase tracking-[0.07em] mb-2 leading-tight">Selesai<br/>✓ Done</p>
+                                <p class="text-white text-[32px] font-black leading-none">{stageSummary().selesai}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN (40%) */}
-                    <div class="lg:col-span-5 space-y-6">
-                        {/* Active Projects List */}
-                        <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
-                            <div class="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                                <h3 class="font-bold text-slate-800">Proyek Aktif</h3>
-                                <button onClick={() => props.onTabChange?.('PROJECTS')} class="text-xs font-medium text-blue-600 hover:text-blue-700">Lihat Semua →</button>
-                            </div>
-                            <div class="divide-y divide-slate-100">
-                                <For each={activeProjects().slice(0, 4)}>
-                                    {(p) => {
-                                        const pSites = sites.filter(s => s.projectId === p.id);
-                                        const pBudget = p.budget || 0;
-                                        const pCost = pBudget * 0.4;
-                                        const usedPct = pBudget > 0 ? (pCost / pBudget) * 100 : 0;
+                    {/* ROW 2: FINANCIAL SUMMARY */}
+                    <div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <ModernKPICard
+                                title="Total Nilai Kontrak"
+                                value={financials().totalHarga > 0 ? formatRupiah(financials().totalHarga) : '—'}
+                                icon={Wallet}
+                                iconClass="bg-blue-50 text-blue-600"
+                                subtitle={financials().totalHarga > 0 ? 'Seluruh tipe pekerjaan' : 'Data harga belum diset'}
+                            />
 
-                                        return (
-                                            <div class="p-4 hover:bg-slate-50 transition-colors group cursor-pointer" onClick={() => props.onTabChange?.('PROJECTS')}>
-                                                <div class="flex items-start justify-between mb-2">
-                                                    <div>
-                                                        <h4 class="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{p.name}</h4>
-                                                        <div class="flex items-center gap-2 mt-1">
-                                                            <span class={clsx("text-[9px] font-bold px-1.5 py-0.5 rounded uppercase", getBadgeClass(p.type as ProjectType))}>{p.type}</span>
-                                                            <span class="text-xs text-slate-500">{pSites.length} sites</span>
+                            <ModernKPICard
+                                title="Termin Terbayar"
+                                value={financials().terminTerbayar > 0 ? formatRupiah(financials().terminTerbayar) : '—'}
+                                icon={CheckCircle2}
+                                iconClass="bg-emerald-50 text-emerald-600"
+                                subtitle={financials().totalHarga > 0 ? `${financials().pctTerbayar}% dari total kontrak` : 'Data harga belum diset'}
+                            />
+
+                            <ModernKPICard
+                                title="Menunggu Approval"
+                                value={
+                                    <div class="flex items-center gap-2">
+                                        {financials().menungguApprovalCount}
+                                        <Show when={financials().menungguApprovalCount > 0}>
+                                            <span class="relative flex h-2.5 w-2.5 mx-1">
+                                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                                            </span>
+                                        </Show>
+                                    </div>
+                                }
+                                icon={Clock}
+                                iconClass={financials().menungguApprovalCount > 0 ? "bg-amber-500 text-white" : "bg-slate-50 text-slate-400"}
+                                subtitle={financials().totalHarga > 0 ? 'Pengajuan termin menunggu review' : 'Data harga belum diset'}
+                                trend={financials().menungguApprovalCount > 0 ? { direction: 'down', label: 'Action Needed', colorClass: 'bg-amber-100 text-amber-700' } : undefined}
+                                onClick={() => props.onTabChange?.('TERMIN')}
+                                isActive={false}
+                            />
+
+                            <ModernKPICard
+                                title="Sisa Tagih"
+                                value={
+                                    <span class="text-blue-600">
+                                        {financials().totalHarga > 0 ? formatRupiah(financials().sisaTagih) : '—'}
+                                    </span>
+                                }
+                                icon={CreditCard}
+                                iconClass="bg-indigo-50 text-indigo-600"
+                                subtitle={financials().totalHarga > 0 ? 'Belum ditagihkan' : 'Data harga belum diset'}
+                            />
+                        </div>
+                    </div>
+
+                    {/* ROW 3: OVERVIEW PER TIPE */}
+                    <div>
+                        <h3 class="text-[11px] font-semibold text-[#9CA3AF] tracking-[0.08em] uppercase mb-4 mt-8">
+                            Tipe Pekerjaan
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <For each={projectTypes}>
+                                {(t) => {
+                                    const summary = getTypeSummary(t.id);
+                                    return (
+                                        <div onClick={() => props.onTabChange?.(t.id)} class={clsx(
+                                            "rounded-[12px] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)] hover:shadow-md hover:-translate-y-0.5 transition-all group flex flex-col justify-between h-[130px] cursor-pointer text-left",
+                                            summary.importedCount === 0 ? "bg-[#FAFAFA]" : "bg-white"
+                                        )}>
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <h4 class="text-[16px] font-bold text-[#111827]">{t.label}</h4>
+                                                    <span class="text-[13px] text-[#6B7280]">{summary.importedCount} Sites</span>
+                                                </div>
+                                                <span class={clsx("w-9 h-9 rounded-full flex items-center justify-center shadow-sm", t.bg, t.color)}>
+                                                    <Building2 class="w-[18px] h-[18px]" strokeWidth="2.5" />
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="mt-auto">
+                                                <Show when={summary.importedCount > 0} fallback={<div class="text-[11px] text-[#9CA3AF]">Belum ada site</div>}>
+                                                    <div class="text-[11px] text-[#9CA3AF] mb-1.5 truncate">
+                                                        {summary.permit} Permit • {summary.impl} Impl
+                                                    </div>
+                                                    <div class="h-1 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                                                        <Show when={summary.awal > 0}><div style={{width: `${(summary.awal/summary.importedCount)*100}%`}} class="bg-[#94A3B8] h-full" /></Show>
+                                                        <Show when={summary.permit > 0}><div style={{width: `${(summary.permit/summary.importedCount)*100}%`}} class="bg-[#F59E0B] h-full" /></Show>
+                                                        <Show when={summary.akses > 0}><div style={{width: `${(summary.akses/summary.importedCount)*100}%`}} class="bg-[#3B82F6] h-full" /></Show>
+                                                        <Show when={summary.impl > 0}><div style={{width: `${(summary.impl/summary.importedCount)*100}%`}} class="bg-[#8B5CF6] h-full" /></Show>
+                                                        <Show when={summary.selesai > 0}><div style={{width: `${(summary.selesai/summary.importedCount)*100}%`}} class="bg-[#10B981] h-full" /></Show>
+                                                    </div>
+                                                </Show>
+                                            </div>
+                                        </div>
+                                    );
+                                }}
+                            </For>
+                        </div>
+                    </div>
+
+                    {/* ROW 4: TWO-COLUMN LAYOUT */}
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                        {/* LEFT COLUMN (60%): Butuh Tindakan & Aktivitas */}
+                        <div class="lg:col-span-7 space-y-6">
+                            
+                            {/* Butuh Tindakan Segera */}
+                            <div class="bg-white rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)] overflow-hidden">
+                                <div class="px-5 py-4 flex items-center justify-between">
+                                    <h3 class="font-bold text-[14px] text-[#111827] flex items-center gap-2">
+                                        <div class="w-2 h-2 rounded-full bg-[#EF4444] animate-ping opacity-75 shrink-0" />
+                                        Butuh Tindakan Segera
+                                    </h3>
+                                    <Show when={actionNeededList().length > 0}>
+                                        <span class="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[11px] font-bold">
+                                            {actionNeededList().length} items
+                                        </span>
+                                    </Show>
+                                </div>
+                                <div class="flex flex-col">
+                                    <Show when={actionNeededList().length > 0} fallback={
+                                        <div class="p-8 text-center flex flex-col items-center justify-center">
+                                            <CheckCircle2 class="w-8 h-8 text-[#10B981] mb-2" />
+                                            <span class="text-[14px] font-medium text-[#111827]">Semua site dalam kondisi normal</span>
+                                            <span class="text-[13px] text-[#6B7280]">Tidak ada tindakan mendesak saat ini</span>
+                                        </div>
+                                    }>
+                                        <For each={actionNeededList()}>
+                                            {(item) => {
+                                                const isCritical = item.title.includes('> 21 hari') || item.title.includes('issue_hold') || item.title.toLowerCase().includes('issue');
+                                                const borderColor = isCritical ? 'border-l-[#EF4444]' : 'border-l-[#F59E0B]';
+                                                return (
+                                                    <div onClick={() => props.onTabChange?.('ALL_SITES')} class={clsx("p-4 flex items-center justify-between hover:bg-[#F9FAFB] transition-colors border-l-[3px] border-b border-b-slate-50 cursor-pointer group", borderColor)}>
+                                                        <div class="text-left">
+                                                            <div class="font-semibold text-[#111827] text-[14px] mb-0.5">{item.siteName}</div>
+                                                            <div class="text-[12px] text-[#6B7280]">
+                                                                {item.title} · {item.type}
+                                                            </div>
+                                                        </div>
+                                                        <div class="text-[13px] font-medium text-[#2563EB] opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                            Lihat <span class="text-[16px] leading-none mb-0.5">→</span>
                                                         </div>
                                                     </div>
-                                                    <ChevronRight class="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
-                                                </div>
-                                                <div>
-                                                    <div class="flex justify-between text-[10px] text-slate-500 mb-1">
-                                                        <span>Budget Used</span>
-                                                        <span class="font-mono">{usedPct.toFixed(0)}%</span>
+                                                );
+                                            }}
+                                        </For>
+                                    </Show>
+                                </div>
+                            </div>
+
+                            {/* Aktivitas Terbaru */}
+                            <div class="bg-white rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)] overflow-hidden">
+                                <div class="px-5 py-4 text-left">
+                                    <h3 class="font-bold text-[14px] text-[#111827]">Aktivitas Terbaru</h3>
+                                </div>
+                                <div class="px-5 pb-5">
+                                    <ul class="flex flex-col text-left">
+                                        <For each={activityFeed.slice(0, 5)}>
+                                            {(log, idx) => {
+                                                const userMatch = people.find(p => p.id === log.userId);
+                                                const userName = userMatch ? userMatch.name : 'Sistem';
+                                                const initial = userName.charAt(0);
+                                                return (
+                                                    <li class="flex gap-3 py-3 relative">
+                                                        <div class="w-8 h-8 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 font-bold shrink-0 z-10">
+                                                            {initial}
+                                                        </div>
+                                                        <div class={clsx("flex-1 pb-3", idx() < 4 ? "border-b border-slate-100 w-[80%]" : "")}>
+                                                            <div class="text-[13px] leading-snug">
+                                                                <span class="font-semibold text-[#111827]">{userName}</span>{' '}
+                                                                <span class="text-[#374151]">{log.action}</span>{' '}
+                                                                <span class="font-medium text-[#374151]">{log.target}</span>
+                                                            </div>
+                                                            <div class="text-[11px] text-[#6B7280] mt-1">{log.timestamp}</div>
+                                                        </div>
+                                                    </li>
+                                                );
+                                            }}
+                                        </For>
+                                    </ul>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        {/* RIGHT COLUMN (40%): Pengajuan Menunggu */}
+                        <div class="lg:col-span-5 space-y-6">
+                            <div class="bg-white rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)] overflow-hidden">
+                                <div class="px-5 py-4 flex justify-between items-center">
+                                    <h3 class="font-bold text-[14px] text-[#111827] flex items-center gap-2">
+                                        Pengajuan Termin
+                                        <Show when={pendingPengajuanList().length > 0}>
+                                            <div class="w-2 h-2 rounded-full bg-[#F59E0B]" />
+                                        </Show>
+                                    </h3>
+                                </div>
+                                <div class="flex flex-col text-left">
+                                    <Show when={pendingPengajuanList().length > 0} fallback={
+                                        <div class="p-8 text-center text-[13px] text-[#6B7280] bg-[#FAFAFA]">
+                                            Tidak ada pengajuan yg menunggu review.
+                                        </div>
+                                    }>
+                                        <For each={pendingPengajuanList().slice(0, 6)}>
+                                            {(item, idx) => {
+                                                const isTermin = item.title.toLowerCase().includes('termin');
+                                                const badgeText = isTermin ? `T${item.title.match(/\d+/)?.[0] || '?'}` : 'REQ';
+
+                                                return (
+                                                    <div class="p-4 hover:bg-[#F9FAFB] transition-colors border-t border-slate-50 group flex items-start justify-between gap-3">
+                                                        <div class="flex items-start gap-3 overflow-hidden">
+                                                            <div class="shrink-0 mt-0.5 bg-[#FEF3C7] text-[#92400E] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                                                {badgeText}
+                                                            </div>
+                                                            <div class="overflow-hidden cursor-default text-left">
+                                                                <div class="font-semibold text-[#111827] text-[13px] truncate">
+                                                                    {item.siteId} · {item.siteName}
+                                                                </div>
+                                                                <div class="flex items-center gap-1.5 mt-1 text-[12px] text-[#6B7280] whitespace-nowrap">
+                                                                    <span class="font-medium text-[#374151]">{formatRupiah(item.amount)}</span>
+                                                                    <span>·</span>
+                                                                    <span>Diajukan {new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => props.onTabChange?.('TERMIN')}
+                                                            class="shrink-0 text-[13px] font-medium text-[#2563EB] opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
+                                                        >
+                                                            Review <span class="text-[14px] leading-none">→</span>
+                                                        </button>
                                                     </div>
-                                                    <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                        <div class="h-full bg-blue-500" style={{ width: `${usedPct}%` }}></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    }}
-                                </For>
+                                                );
+                                            }}
+                                        </For>
+                                    </Show>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Recent Work Orders */}
-                        <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
-                            <div class="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                                <h3 class="font-bold text-slate-800">Work Orders</h3>
-                                <Show when={['management', 'backoffice_admin'].includes(user().role)}>
-                                    <button onClick={() => props.onTabChange?.('WO')} class="text-xs font-medium text-blue-600 hover:text-blue-700">+ Input WO</button>
-                                </Show>
-                            </div>
-                            <div class="p-0 overflow-x-auto">
-                                <table class="w-full text-left text-sm whitespace-nowrap">
-                                    <thead>
-                                        <tr class="bg-slate-50 border-b border-slate-100 text-xs text-slate-500">
-                                            <th class="px-4 py-2 font-semibold">WO Number</th>
-                                            <th class="px-4 py-2 font-semibold">Status</th>
-                                            <th class="px-4 py-2 font-semibold">Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100">
-                                        <For each={workOrders.slice(0, 4)}>
-                                            {(wo) => (
-                                                <tr class="hover:bg-slate-50 cursor-pointer" onClick={() => props.onTabChange?.('WO')}>
-                                                    <td class="px-4 py-2 flex flex-col">
-                                                        <span class="font-mono font-bold text-slate-700 hover:text-blue-600 transition-colors">{wo.woNumber}</span>
-                                                        <span class="text-[10px] text-slate-400 truncate max-w-[120px]">{wo.pemberiKerja}</span>
-                                                    </td>
-                                                    <td class="px-4 py-2">
-                                                        <span class={clsx(
-                                                            "inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border",
-                                                            wo.status === 'Unassigned' ? 'bg-slate-50 text-slate-600 border-slate-200' :
-                                                                wo.status === 'Pending SPK Approval' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                                    wo.status === 'SPK Created' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                                                        'bg-blue-50 text-blue-700 border-blue-200'
-                                                        )}>
-                                                            {wo.status}
-                                                        </span>
-                                                    </td>
-                                                    <td class="px-4 py-2 text-xs text-slate-500">{new Date(wo.tanggalWo).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</td>
-                                                </tr>
-                                            )}
-                                        </For>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="px-4 py-2 border-t border-slate-100 text-center">
-                                <button onClick={() => props.onTabChange?.('WO')} class="text-xs text-slate-500 hover:text-slate-800">Lihat Semua WOs</button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </Show>
