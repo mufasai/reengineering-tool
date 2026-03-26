@@ -78,7 +78,35 @@ export class SiteRepositoryImpl implements SiteRepository {
     }
 
     async updateStage(siteId: string, request: UpdateSiteStageRequest): Promise<Site> {
-        const response = await apiClient.post<ApiResponse<Site>>(`/api/sites/${siteId}/stage`, request);
+        const formData = new FormData();
+
+        // Add all fields from request to formData
+        Object.keys(request).forEach(key => {
+            const value = request[key];
+
+            // Skip files array - will be handled separately
+            if (key === 'files') return;
+
+            // Handle different value types
+            if (value !== null && value !== undefined) {
+                if (typeof value === 'boolean') {
+                    formData.append(key, value.toString());
+                } else if (typeof value === 'object' && !(value instanceof File)) {
+                    formData.append(key, JSON.stringify(value));
+                } else {
+                    formData.append(key, value.toString());
+                }
+            }
+        });
+
+        // Handle file uploads if present
+        if (request.files && Array.isArray(request.files)) {
+            request.files.forEach((file: File) => {
+                formData.append('file', file);
+            });
+        }
+
+        const response = await apiClient.postFormData<ApiResponse<Site>>(`/api/sites/${siteId}/stage`, formData);
         return response.data;
     }
 }

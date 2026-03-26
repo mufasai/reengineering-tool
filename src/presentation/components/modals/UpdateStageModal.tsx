@@ -274,32 +274,34 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
-        
+
         const changedBy = authStore.user()?.name || 'System';
-        
+
         if (showIssueForm()) {
             if (!isIssueValid()) return;
             // For now issue still uses callback, but could be integrated to API too
             props.onUpdateStage('issue_hold', issueNotes(), { issueAction: issueAction() });
         } else {
             if (!isMainFormValid()) return;
-            
+
             try {
                 setIsSubmitting(true);
                 const nextStage = nextLogicalStageId()!;
-                
+
                 const request: UpdateSiteStageRequest = {
                     stage: nextStage,
                     notes: notes(),
                     changed_by: changedBy,
-                    ...formData()
+                    ...formData(),
+                    // Include files array for form-data upload
+                    files: files()
                 };
 
                 const siteRepo = new SiteRepositoryImpl();
                 const updateStageUseCase = new UpdateSiteStageInteractor(siteRepo);
-                
+
                 await updateStageUseCase.execute(props.siteId, request);
-                
+
                 props.onUpdateStage(nextStage, notes(), formData());
                 props.onClose();
             } catch (err: any) {

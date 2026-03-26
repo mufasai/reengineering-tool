@@ -104,4 +104,5 @@ export interface UpdateSiteStageRequest extends Record<string, any> {
     stage: string;
     notes?: string;
     changed_by: string;
+    files?: File[];
 }
