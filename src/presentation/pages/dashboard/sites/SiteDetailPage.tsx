@@ -18,6 +18,11 @@ import type { SiteEvidence } from '../../../../domain/entities/site-evidence.ent
 import { GetSiteByIdInteractor } from '../../../../application/use-cases/get-site-by-id.use-case';
 import { GetSiteEvidenceInteractor } from '../../../../application/use-cases/get-site-evidence.use-case';
 import { siteRepository } from '../../../../infrastructure/repositories/site.repository.impl';
+import { 
+    TableContainer, FilterBar, DataTable, TableHeader, TableHead, 
+    TableBody, TableRow, TableCell, ActionButton, Pagination, EmptyState 
+} from '../../../components/common/Table';
+
 
 const getSiteById = new GetSiteByIdInteractor(siteRepository);
 const getSiteEvidence = new GetSiteEvidenceInteractor(siteRepository);
@@ -40,6 +45,10 @@ const DownloadIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" cla
 const Copy = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>;
 const Printer = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" /></svg>;
 const ChevronDown = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>;
+const Lock = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>;
+const Clock = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>;
+const MoreHorizontal = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>;
+
 
 const clsx = (...classes: any[]) => classes.flat().filter(Boolean).join(' ');
 
@@ -79,6 +88,48 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     const boq = createMemo(() => siteBoQRecords.filter(b => b.siteId === props.siteId));
     const stageHistory = createMemo(() => siteStageLogs.filter(l => l.site_master_id === props.siteId));
     const files = createMemo(() => siteFiles() || []);
+
+    // Costs & Payments State
+    const [searchTerm, setSearchTerm] = createSignal('');
+    const [statusFilter, setStatusFilter] = createSignal('');
+    const [page, setPage] = createSignal(1);
+    const itemsPerPage = 5;
+
+    const [activeStep, setActiveStep] = createSignal('T1');
+
+    const filteredCosts = createMemo(() => {
+        return costs().filter(cost => {
+            const matchesSearch = (cost.typeTermin || '').toLowerCase().includes(searchTerm().toLowerCase());
+            const matchesStatus = statusFilter() === '' || cost.status === statusFilter();
+            return matchesSearch && matchesStatus;
+        });
+    });
+
+    const totalPages = createMemo(() => Math.ceil(filteredCosts().length / itemsPerPage));
+    const paginatedCosts = createMemo(() => {
+        const start = (page() - 1) * itemsPerPage;
+        return filteredCosts().slice(start, start + itemsPerPage);
+    });
+
+    // Mock permissions for now
+    const canSubmit = true;
+    const canUploadProof = true;
+    const canApprove = true;
+
+    const onSubmit = () => console.log('Submit Pengajuan');
+    const onUploadProof = (id: string) => console.log('Upload Proof', id);
+    const onApprove = (id: string) => console.log('Approve', id);
+    const onReject = (id: string) => console.log('Reject', id);
+
+    const paymentSteps = [
+        { id: 'T1', label: 'T1', percentage: '30%', status: 'active', icon: 'time' },
+        { id: 'T2a', label: 'T2a', percentage: '15%', status: 'locked', icon: 'lock' },
+        { id: 'T2b', label: 'T2b', percentage: '25%', status: 'locked', icon: 'lock' },
+        { id: 'T2c', label: 'T2c', percentage: '10%', status: 'locked', icon: 'lock' },
+        { id: 'T3', label: 'T3', percentage: '10%', status: 'locked', icon: 'lock' },
+        { id: 'T4', label: 'T4', percentage: '10%', status: 'locked', icon: 'lock' },
+    ];
+
 
     const stages: any[] = [
         { id: 'assigned', label: 'Assigned' },
@@ -801,75 +852,220 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                             </Show>
 
                             <Show when={activeTab() === 'costs'}>
-                                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                                    {/* Financial Summary */}
-                                    <div class="lg:col-span-1 space-y-6">
-                                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                            <h3 class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-50 pb-2">Site Budget</h3>
-                                            <div class="flex flex-col">
-                                                <span class="text-2xl font-semibold text-slate-800">Rp {(site()?.maximal_budget || 0).toLocaleString()}</span>
-                                                <div class="mt-4 pt-4 border-t border-slate-50 flex justify-between items-end">
+                                <div class="space-y-6">
+                                    {/* FILTER PAYMENT TERMS */}
+                                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                                        <div class="p-6 border-b border-slate-50 flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-500">
+                                                <DollarSign class="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <h3 class="font-bold text-slate-800 uppercase tracking-tight text-sm">Filter Payment Terms</h3>
+                                                <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Sequential Payment Flow</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="p-8">
+                                            {/* Stepper */}
+                                            <div class="flex items-center justify-between relative px-4 mb-12">
+                                                <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-100 -translate-y-1/2 -z-0"></div>
+                                                <div 
+                                                    class="absolute top-1/2 left-0 h-0.5 bg-blue-500 -translate-y-1/2 transition-all duration-500 -z-0"
+                                                    style={{ width: '20%' }}
+                                                ></div>
+
+                                                <For each={paymentSteps}>
+                                                    {(step) => (
+                                                        <div class="flex flex-col items-center gap-3 z-10">
+                                                            <button 
+                                                                onClick={() => setActiveStep(step.id)}
+                                                                class={clsx(
+                                                                    "w-10 h-10 rounded-full flex items-center justify-center transition-all border-2 font-bold text-xs shadow-sm",
+                                                                    step.status === 'active' ? "bg-blue-500 border-blue-500 text-white ring-4 ring-blue-50 scale-110" :
+                                                                    step.status === 'completed' ? "bg-emerald-500 border-emerald-500 text-white" :
+                                                                    "bg-white border-slate-200 text-slate-300"
+                                                                )}
+                                                            >
+                                                                <Show when={step.icon === 'lock'} fallback={<Clock class="w-5 h-5" />}>
+                                                                    <Lock class="w-5 h-5" />
+                                                                </Show>
+                                                            </button>
+                                                            <div class="text-center">
+                                                                <p class={clsx("text-xs font-bold", step.status === 'active' ? "text-blue-600" : "text-slate-400")}>{step.label}</p>
+                                                                <p class="text-[9px] font-semibold text-slate-400">{step.percentage}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </For>
+                                            </div>
+
+                                            {/* Step Details */}
+                                            <div class="bg-slate-50/50 rounded-xl p-6 border border-slate-100 flex items-center justify-between">
+                                                <div class="flex items-start gap-4">
                                                     <div class="flex flex-col">
-                                                        <span class="text-[8px] text-slate-400 uppercase font-semibold tracking-tighter">Paid Out</span>
-                                                        <span class="text-sm font-semibold text-emerald-600">Rp {costs().reduce((acc, c) => acc + c.jumlahPembayaran, 0).toLocaleString()}</span>
+                                                        <h4 class="text-sm font-bold text-slate-800">{activeStep()} <span class="text-slate-400 font-medium ml-1">(30%)</span></h4>
+                                                        <p class="text-xs text-slate-500 mt-1 font-medium">Permit sudah ready</p>
+                                                        <div class="flex items-center gap-2 mt-2">
+                                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Diajukan 5 Mar 2024 • Rp 45.000.000 —</span>
+                                                            <span class="text-[10px] font-medium text-slate-400 italic">Permit sudah turun sesuai standar operasional</span>
+                                                        </div>
                                                     </div>
-                                                    <div class="text-[10px] font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded">
-                                                        {((costs().reduce((acc, c) => acc + c.jumlahPembayaran, 0) / (site()?.maximal_budget || 1)) * 100).toFixed(1)}%
-                                                    </div>
+                                                </div>
+                                                <div class="flex gap-2">
+                                                    <button class="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 shadow-sm">
+                                                        <CheckCircle2 class="w-3.5 h-3.5" />
+                                                        Setujui
+                                                    </button>
+                                                    <button class="px-4 py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 shadow-sm">
+                                                        <X class="w-3.5 h-3.5" />
+                                                        Tolak
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex items-center gap-6 mt-8">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-2.5 h-2.5 rounded-full bg-slate-200"></div>
+                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Terkunci</span>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Siap Diajukan</span>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Menunggu</span>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Selesai</span>
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <button
-                                            onClick={() => alert('Pengajuan Termin Modal needs implementation')}
-                                            class="w-full py-4 bg-emerald-600 text-white font-semibold rounded-xl shadow-md hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <DollarSign class="w-5 h-5" />
-                                            Request Payment
-                                        </button>
                                     </div>
 
-                                    {/* Payment Timeline */}
-                                    <div class="lg:col-span-3">
-                                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                            <h3 class="text-sm font-semibold text-slate-800 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2">Payment Requests</h3>
-                                            <div class="overflow-x-auto">
-                                                <table class="w-full text-left">
-                                                    <thead>
-                                                        <tr class="border-b border-slate-50 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                                                            <th class="px-2 py-3">Step</th>
-                                                            <th class="px-2 py-3">Status</th>
-                                                            <th class="px-2 py-3 text-right">Requested</th>
-                                                            <th class="px-2 py-3 text-right">Paid</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody class="text-sm font-medium">
-                                                        <For each={costs()}>
-                                                            {(cost) => (
-                                                                <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                                                    <td class="px-2 py-4 font-semibold text-slate-700">{cost.typeTermin}</td>
-                                                                    <td class="px-2 py-4">
-                                                                        <span class={clsx(
-                                                                            "px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-tighter",
-                                                                            cost.status === 'paid' ? "bg-emerald-100 text-emerald-700" :
-                                                                                cost.status === 'pengajuan' ? "bg-blue-100 text-blue-700" :
-                                                                                    "bg-slate-100 text-slate-700"
-                                                                        )}>
-                                                                            {cost.status}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td class="px-2 py-4 text-right font-mono text-slate-600 text-sm">Rp {cost.jumlahPengajuan.toLocaleString()}</td>
-                                                                    <td class="px-2 py-4 text-right font-mono font-semibold text-slate-800 text-sm">Rp {cost.jumlahPembayaran.toLocaleString()}</td>
-                                                                </tr>
-                                                            )}
-                                                        </For>
-                                                    </tbody>
-                                                </table>
+                                    {/* Riwayat Pengajuan */}
+                                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                                        <div class="p-4 flex items-center justify-between bg-white border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors">
+                                            <div>
+                                                <h3 class="text-sm font-bold text-slate-800">Riwayat Pengajuan</h3>
+                                                <p class="text-[10px] text-slate-400 font-semibold tracking-tight">1 record</p>
+                                            </div>
+                                            <ChevronDown class="w-4 h-4 text-slate-400" />
+                                        </div>
+                                        <div class="p-4">
+                                            <div class="flex items-center justify-between py-4 border-b border-slate-50 last:border-0 group">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                                                        <Clock class="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-sm font-bold text-slate-800">T1</span>
+                                                            <span class="text-sm font-semibold text-slate-600">Rp 45.000.000</span>
+                                                            <span class="text-[11px] text-slate-400 font-medium">Diajukan 5 Mar — <span class="italic font-normal">Permit sudah turun sesuai standar operasional</span></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <button class="px-3 py-1.5 bg-emerald-500 text-white text-[10px] font-bold rounded flex items-center gap-1.5 hover:bg-emerald-600 transition-colors shadow-sm">
+                                                        <CheckCircle2 class="w-3 h-3" /> Approve
+                                                    </button>
+                                                    <button class="px-3 py-1.5 bg-red-500 text-white text-[10px] font-bold rounded flex items-center gap-1.5 hover:bg-red-600 transition-colors shadow-sm">
+                                                        <X class="w-3 h-3" /> Tolak
+                                                    </button>
+                                                    <button class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors border border-slate-100">
+                                                        <FileText class="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Cost & Payments Table */}
+                                    <TableContainer>
+                                        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+                                            <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+                                                <DollarSign class="w-4 h-4 text-emerald-500" /> Cost & Payments
+                                            </h3>
+                                            <Show when={canSubmit}>
+                                                <button onClick={onSubmit} class="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded hover:bg-emerald-700 transition-colors flex items-center gap-1 shadow-sm font-medium">
+                                                    <Send class="w-3 h-3" /> Submit Pengajuan
+                                                </button>
+                                            </Show>
+                                        </div>
+                                        
+                                        <FilterBar
+                                            searchValue={searchTerm()}
+                                            onSearchChange={(v) => { setSearchTerm(v); setPage(1); }}
+                                            searchPlaceholder="Search termin..."
+                                            statusOptions={[
+                                                { label: 'Pengajuan', value: 'pengajuan' },
+                                                { label: 'Approved', value: 'approved' },
+                                                { label: 'Paid', value: 'paid' },
+                                                { label: 'Rejected', value: 'rejected' },
+                                            ]}
+                                            statusValue={statusFilter()}
+                                            onStatusChange={(v) => { setStatusFilter(v); setPage(1); }}
+                                            onExport={(t) => console.log(t)}
+                                        />
+
+                                        <DataTable>
+                                            <TableHeader>
+                                                <TableHead className="min-w-[200px]">Termin</TableHead>
+                                                <TableHead className="min-w-[120px]">Status</TableHead>
+                                                <TableHead className="min-w-[160px]">Pengajuan</TableHead>
+                                                <TableHead className="min-w-[160px]">Dibayar</TableHead>
+                                                <TableHead className="min-w-[100px] text-right">Actions</TableHead>
+                                            </TableHeader>
+                                            <TableBody>
+                                                <Show 
+                                                    when={paginatedCosts().length > 0} 
+                                                    fallback={<tr><td colspan={5}><EmptyState message="No costs found" /></td></tr>}
+                                                >
+                                                    <For each={paginatedCosts()}>
+                                                        {(cost) => {
+                                                            const statusColors: Record<string, string> = {
+                                                                    pengajuan: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                                                                    approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                                                    paid: 'bg-green-50 text-green-700 border-green-200',
+                                                                    rejected: 'bg-red-50 text-red-700 border-red-200'
+                                                            };
+                                                            return (
+                                                                <TableRow>
+                                                                    <TableCell className="font-medium text-slate-700">{cost.typeTermin}</TableCell>
+                                                                    <TableCell>
+                                                                        <span class={clsx("px-2.5 py-1 rounded-full text-xs font-semibold border", statusColors[cost.status] || 'bg-slate-100')}>
+                                                                            {(cost.status || '').toUpperCase()}
+                                                                        </span>
+                                                                    </TableCell>
+                                                                    <TableCell className="text-slate-600">Rp {(cost.jumlahPengajuan || 0).toLocaleString('id-ID')}</TableCell>
+                                                                    <TableCell className="font-semibold text-slate-800">Rp {(cost.jumlahPembayaran || 0).toLocaleString('id-ID')}</TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        <div class="flex justify-end gap-2">
+                                                                            <Show when={cost.status === 'approved' && canUploadProof}>
+                                                                                <ActionButton type="upload" label="Proof" onClick={() => onUploadProof(cost.id)} />
+                                                                            </Show>
+                                                                            <Show when={cost.status === 'pengajuan' && canApprove}>
+                                                                                <>
+                                                                                    <ActionButton type="approve" onClick={() => onApprove(cost.id)} />
+                                                                                    <ActionButton type="reject" onClick={() => onReject(cost.id)} />
+                                                                                </>
+                                                                            </Show>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            );
+                                                        }}
+                                                    </For>
+                                                </Show>
+                                            </TableBody>
+                                        </DataTable>
+                                        <Pagination currentPage={page()} totalPages={totalPages()} totalItems={filteredCosts().length} itemsPerPage={itemsPerPage} onPageChange={setPage} />
+                                    </TableContainer>
                                 </div>
                             </Show>
+
                         </div>
                     </div>
 

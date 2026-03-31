@@ -23,6 +23,8 @@ import TerminReviewPage from './TerminReviewPage';
 import TerminPaymentPage from './TerminPaymentPage';
 import CreateMaterialModal from './components/CreateMaterialModal';
 import AddTeamModal from './components/AddTeamModal';
+import FilterPaymentSection from './components/FilterPaymentSection';
+import CostsPaymentSection from './components/CostsPaymentSection';
 
 interface SiteDetailPageProps {
     site: Site;
@@ -945,6 +947,40 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                         </div>
                     )}
                 </div>
+
+                {/* Filter Payment Section - Always show for now */}
+                <FilterPaymentSection
+                    localStage={props.site.stage || 'imported'}
+                    localPengajuan={[]}
+                    localFiles={siteFiles()}
+                    onAjukan={(terminKey, nominal, contextKeys) => {
+                        console.log('Ajukan termin:', terminKey, nominal, contextKeys);
+                        alert(`Ajukan ${terminKey} dengan nominal Rp ${nominal.toLocaleString('id-ID')}`);
+                    }}
+                    onApprove={(pengajuanId, nominal, terminKey, e) => {
+                        console.log('Approve:', pengajuanId, nominal, terminKey);
+                        alert(`Approve ${terminKey} sebesar Rp ${nominal.toLocaleString('id-ID')}`);
+                    }}
+                    onReject={(pengajuanId, e) => {
+                        console.log('Reject:', pengajuanId);
+                        const reason = prompt('Alasan penolakan:');
+                        if (reason) {
+                            alert(`Rejected: ${reason}`);
+                        }
+                    }}
+                />
+
+                {/* Cost & Payments Table */}
+                <CostsPaymentSection
+                    costs={[]}
+                    canSubmit={canEdit()}
+                    canUploadProof={canEdit()}
+                    canApprove={canEdit()}
+                    onSubmit={() => alert('Submit cost modal')}
+                    onUploadProof={(id) => alert(`Upload proof for ${id}`)}
+                    onApprove={(id) => alert(`Approve cost ${id}`)}
+                    onReject={(id) => alert(`Reject cost ${id}`)}
+                />
 
                 {/* Termins */}
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">

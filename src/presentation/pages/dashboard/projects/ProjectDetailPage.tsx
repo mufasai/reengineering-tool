@@ -7,6 +7,7 @@ import type { ProjectFile } from '../../../../domain/entities/project-file.entit
 import CreateSiteModal from './components/CreateSiteModal';
 import UploadProjectFileModal from './components/UploadProjectFileModal';
 import FilePreviewModal from './components/FilePreviewModal';
+import ProjectSitesTable from './components/ProjectSitesTable';
 import SiteDetailPage from './SiteDetailPage';
 import { GetSitesByProjectInteractor } from '../../../../application/use-cases/get-sites-by-project.use-case';
 import { GetProjectFilesInteractor } from '../../../../application/use-cases/get-project-files.use-case';
@@ -563,63 +564,35 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                             <button
                                 onClick={() => setShowCreateSiteModal(true)}
                                 disabled={isReadOnly()}
-                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center gap-2"
                             >
-                                + Add Site
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                                    <polyline points="2 17 12 22 22 17" />
+                                    <polyline points="2 12 12 17 22 12" />
+                                </svg>
+                                Add Site
                             </button>
                         </div>
 
-                        {/* Sites AG Grid */}
-                        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                            {/* Search Bar */}
-                            <div class="p-4 border-b border-slate-200">
-                                <input
-                                    type="text"
-                                    placeholder="Cari site..."
-                                    class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none text-sm"
-                                    value={searchTerm()}
-                                    onInput={(e) => setSearchTerm(e.currentTarget.value)}
-                                />
-                            </div>
-
-                            {/* AG Grid Table */}
-                            {isLoadingSites() ? (
+                        {/* Sites Table with Expandable Rows */}
+                        <Show when={!isLoadingSites()} fallback={
+                            <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                                 <div class="flex items-center justify-center h-[400px]">
                                     <div class="text-center">
                                         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                                         <p class="mt-2 text-sm text-slate-500">Loading sites...</p>
                                     </div>
                                 </div>
-                            ) : (
-                                <div class="ag-theme-alpine w-full h-[400px]" style={{
-                                    '--ag-background-color': 'transparent',
-                                    '--ag-odd-row-background-color': '#f8fafc',
-                                    '--ag-header-background-color': '#f8fafc',
-                                    '--ag-border-color': '#e2e8f0',
-                                    '--ag-row-hover-color': '#f1f5f9',
-                                    '--ag-selected-row-background-color': '#dbeafe',
-                                    '--ag-font-family': "'Inter', sans-serif",
-                                    '--ag-font-size': '14px',
-                                    '--ag-header-foreground-color': '#64748b',
-                                    '--ag-header-font-weight': '600',
-                                }}>
-                                    <AgGridSolid
-                                        columnDefs={sitesColumnDefs}
-                                        rowData={filteredSites()}
-                                        defaultColDef={{
-                                            sortable: true,
-                                            filter: true,
-                                            resizable: true,
-                                        }}
-                                        rowHeight={60}
-                                        headerHeight={48}
-                                        pagination={true}
-                                        paginationPageSize={10}
-                                        paginationPageSizeSelector={[5, 10, 20]}
-                                    />
-                                </div>
-                            )}
-                        </div>
+                            </div>
+                        }>
+                            <ProjectSitesTable
+                                sites={sites()}
+                                onEdit={(site) => console.log('Edit site', site)}
+                                onDelete={(id) => console.log('Delete site', id)}
+                                onViewDetail={(site) => setSelectedSite(site)}
+                            />
+                        </Show>
                     </div>
                 </div>
 
@@ -632,9 +605,14 @@ const ProjectDetailPage: Component<ProjectDetailPageProps> = (props) => {
                             <button
                                 onClick={() => setShowUploadFileModal(true)}
                                 disabled={isReadOnly()}
-                                class="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:text-slate-400 disabled:cursor-not-allowed"
+                                class="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:text-slate-400 disabled:cursor-not-allowed flex items-center gap-1.5"
                             >
-                                + Add Files
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                                    <polyline points="2 17 12 22 22 17" />
+                                    <polyline points="2 12 12 17 22 12" />
+                                </svg>
+                                Add Files
                             </button>
                         </div>
 
