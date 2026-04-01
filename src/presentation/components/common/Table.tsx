@@ -1,4 +1,4 @@
-import { JSX, ParentComponent } from 'solid-js';
+import { type JSX, type ParentComponent } from 'solid-js';
 
 export const TableContainer: ParentComponent = (props) => {
     return (
@@ -32,7 +32,7 @@ export const FilterBar = (props: FilterBarProps) => {
                 <select
                     class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none text-sm"
                     value={props.statusValue || ''}
-                    onChange={(e) => props.onStatusChange?.(e.currentTarget.value)}
+                    onInput={(e) => props.onStatusChange?.(e.currentTarget.value)}
                 >
                     <option value="">All Status</option>
                     {props.statusOptions.map(opt => (

@@ -37,7 +37,8 @@ interface UpdateStageModalProps {
     onClose: () => void;
     siteId: string;
     siteName?: string;
-    currentStage: SiteStage;
+    projectType?: string;
+    currentStage: string;
     onUpdateStage: (newStage: string, notes?: string, payload?: Record<string, any>) => void;
 }
 
@@ -54,7 +55,11 @@ const STAGE_LABELS: Record<string, string> = {
     'dokumen_done': 'Dokumen Submitted',
     'bast': 'BAST',
     'invoice': 'Invoice',
-    'completed': 'Selesai'
+    'completed': 'Selesai',
+    'survey': 'Survey',
+    'survey_nok': 'Survey NOK',
+    'erfin_process': 'ERFIN Diproses',
+    'erfin_ready': 'ERFIN Ready'
 };
 
 interface TransitionConfig {
@@ -75,6 +80,34 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
         paymentNote: null
     },
     'assigned→permit_process': {
+        nextLabel: 'Permit Diproses',
+        helper: 'Catat tanggal pengajuan permit ke TPAS.',
+        fields: ['permit_date'],
+        requiredFields: ['permit_date'],
+        paymentNote: null
+    },
+    'assigned→survey': {
+        nextLabel: 'Survey',
+        helper: 'Catat tanggal survei hasil lapangan.',
+        fields: ['survey_date'],
+        requiredFields: ['survey_date'],
+        paymentNote: null
+    },
+    'survey→erfin_process': {
+        nextLabel: 'Input Hasil Survey',
+        helper: 'Tentukan hasil survey. Jika OK lanjut ke ERFIN, jika NOK proses berhenti sementara.',
+        fields: ['survey_result_radio'],
+        requiredFields: ['survey_result'],
+        paymentNote: null
+    },
+    'erfin_process→erfin_ready': {
+        nextLabel: 'ERFIN Ready',
+        helper: 'Input data ERFIN yang sudah disetujui.',
+        fields: ['erfin_number', 'erfin_date', 'erfin_ready_date'],
+        requiredFields: ['erfin_number', 'erfin_date'],
+        paymentNote: null
+    },
+    'erfin_ready→permit_process': {
         nextLabel: 'Permit Diproses',
         helper: 'Catat tanggal pengajuan permit ke TPAS.',
         fields: ['permit_date'],
@@ -161,13 +194,30 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
 };
 
 const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
+    const [selectedBranch, setSelectedBranch] = createSignal<string>('');
+
+    const getNextStages = () => {
+        if (props.currentStage === 'survey') return ['erfin_process', 'survey_nok'];
+        
+        // As per user request, standard flow also goes to Survey -> ERFIN now
+        const ppl = props.projectType === 'RESCOPING'
+            ? ['imported', 'assigned', 'survey', 'erfin_process', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfi_done', 'dokumen_done', 'bast', 'invoice', 'completed']
+            : ['imported', 'assigned', 'survey', 'erfin_process', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfs_done', 'dokumen_done', 'bast', 'invoice', 'completed'];
+            
+        const currentIndex = ppl.indexOf(props.currentStage);
+        if (currentIndex === -1 || currentIndex === ppl.length - 1) return [];
+        return [ppl[currentIndex + 1]];
+    };
+
     const nextLogicalStageId = createMemo(() => {
-        const currentIndex = STAGE_ORDER.indexOf(props.currentStage as any);
-        if (currentIndex === -1 || currentIndex === STAGE_ORDER.length - 1) return null;
-        return STAGE_ORDER[currentIndex + 1];
+        const nextStages = getNextStages();
+        return (props.currentStage === 'survey' && selectedBranch() === 'survey_nok') ? 'survey_nok' : (nextStages[0] || null);
     });
 
-    const transitionKey = createMemo(() => `${props.currentStage}→${nextLogicalStageId()}`);
+    const transitionKey = createMemo(() => {
+        return `${props.currentStage}→${props.currentStage === 'survey' ? 'erfin_process' : nextLogicalStageId()}`;
+    });
+    
     const config = createMemo(() => STAGE_TRANSITION_CONFIG[transitionKey()]);
 
     // Form State
@@ -216,6 +266,9 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     const handleFormChange = (key: string, value: any) => {
         setFormData(prev => ({ ...prev, [key]: value }));
+        if (key === 'survey_result') {
+            setSelectedBranch(value === 'nok' ? 'survey_nok' : 'erfin_process');
+        }
     };
 
     const handleDragOver = (e: DragEvent) => {
@@ -258,7 +311,17 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
         if (hasOversizedFiles()) return false;
 
         const data = formData();
+
+        if (props.currentStage === 'survey') {
+            if (!data['survey_result']) return false;
+            if (data['survey_result'] === 'nok' && (!data['survey_nok_reason'] || data['survey_nok_reason'].trim() === '')) return false;
+        }
+
+        if (data['has_akses_gedung'] === true && (!data['gedung_nama'] || data['gedung_nama'] === '')) return false;
+
         for (const req of c.requiredFields) {
+            if (req === 'files' && data['survey_result'] === 'nok') continue;
+
             if (req === 'files') {
                 if (files().length === 0) return false;
             } else if (req === 'tpas_approved' || req === 'tp_approved' || req.startsWith('konfirmasi_')) {
@@ -337,17 +400,20 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                         </select>
                     </div>
                 </Match>
-                <Match when={['permit_date', 'permit_start_date', 'permit_expiry_date', 'tgl_rencana_impl', 'tgl_aktual_mulai', 'tgl_bast', 'tgl_invoice'].includes(field)}>
+                <Match when={['survey_date', 'erfin_date', 'erfin_ready_date', 'permit_date', 'permit_start_date', 'permit_expiry_date', 'tgl_rencana_impl', 'tgl_aktual_mulai', 'tgl_bast', 'tgl_invoice'].includes(field)}>
                     <div class="space-y-1">
                         <label class="block text-sm font-medium text-slate-700">
                             {
-                                field === 'permit_date' ? 'Tanggal Buat Permit' :
-                                    field === 'permit_start_date' ? 'Tanggal Berlaku Permit TPAS' :
-                                        field === 'permit_expiry_date' ? 'Tanggal Berakhir Permit TPAS' :
-                                            field === 'tgl_rencana_impl' ? 'Tanggal Rencana Implementasi' :
-                                                field === 'tgl_aktual_mulai' ? 'Tanggal Aktual Mulai' :
-                                                    field === 'tgl_bast' ? 'Tanggal BAST' :
-                                                        field === 'tgl_invoice' ? 'Tanggal Invoice' : ''
+                                field === 'survey_date' ? 'Tanggal Survey' :
+                                    field === 'erfin_date' ? 'Tanggal ERFIN' :
+                                        field === 'erfin_ready_date' ? 'Tanggal ERFIN Ready' :
+                                            field === 'permit_date' ? 'Tanggal Buat Permit' :
+                                                field === 'permit_start_date' ? 'Tanggal Berlaku Permit TPAS' :
+                                                    field === 'permit_expiry_date' ? 'Tanggal Berakhir Permit TPAS' :
+                                                        field === 'tgl_rencana_impl' ? 'Tanggal Rencana Implementasi' :
+                                                            field === 'tgl_aktual_mulai' ? 'Tanggal Aktual Mulai' :
+                                                                field === 'tgl_bast' ? 'Tanggal BAST' :
+                                                                    field === 'tgl_invoice' ? 'Tanggal Invoice' : ''
                             } {config()?.requiredFields.includes(field) && <span class="text-red-500">*</span>}
                         </label>
                         <input
@@ -432,21 +498,23 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                         </div>
                     </div>
                 </Match>
-                <Match when={['pic_nama', 'pic_telp', 'no_invoice'].includes(field)}>
+                <Match when={['erfin_number', 'pic_nama', 'pic_telp', 'no_invoice'].includes(field)}>
                     <div class="space-y-1">
                         <label class="block text-sm font-medium text-slate-700">
                             {
-                                field === 'pic_nama' ? 'PIC Akses — Nama' :
-                                    field === 'pic_telp' ? 'PIC Akses — No. Telp' :
-                                        field === 'no_invoice' ? 'Nomor Invoice' : ''
+                                field === 'erfin_number' ? 'Nomor ERFIN' :
+                                    field === 'pic_nama' ? 'PIC Akses — Nama' :
+                                        field === 'pic_telp' ? 'PIC Akses — No. Telp' :
+                                            field === 'no_invoice' ? 'Nomor Invoice' : ''
                             } {config()?.requiredFields.includes(field) && <span class="text-red-500">*</span>}
                         </label>
                         <input
                             type={field === 'pic_telp' ? 'tel' : 'text'}
                             placeholder={
-                                field === 'pic_nama' ? 'Nama PIC dari Tower Provider' :
-                                    field === 'pic_telp' ? '08xx xxxx xxxx' :
-                                        field === 'no_invoice' ? 'INV-XXX' : ''
+                                field === 'erfin_number' ? 'ERF-XXX' :
+                                    field === 'pic_nama' ? 'Nama PIC dari Tower Provider' :
+                                        field === 'pic_telp' ? '08xx xxxx xxxx' :
+                                            field === 'no_invoice' ? 'INV-XXX' : ''
                             }
                             required={config()?.requiredFields.includes(field)}
                             value={(data[field] as string) || ''}
@@ -475,6 +543,71 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 } <span class="text-red-500">*</span>
                             </span>
                         </label>
+                    </div>
+                </Match>
+                <Match when={field === 'survey_result_radio'}>
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-slate-800">Hasil Survey <span class="text-red-500">*</span></label>
+                            <div class="flex flex-col gap-3 p-3 bg-slate-50 border border-slate-200 rounded">
+                                <label class="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-slate-200 transition-colors">
+                                    <input 
+                                        type="radio" 
+                                        name="survey_result"
+                                        value="ok"
+                                        checked={data.survey_result === 'ok'}
+                                        onChange={(e) => handleFormChange('survey_result', e.currentTarget.value)}
+                                        class="mt-0.5 text-blue-600 focus:ring-blue-500 w-4 h-4" 
+                                    />
+                                    <div>
+                                        <span class="block text-sm font-bold text-slate-800">OK</span>
+                                        <span class="block text-xs text-slate-500">Site layak, lanjut ke ERFIN</span>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-slate-200 transition-colors">
+                                    <input 
+                                        type="radio" 
+                                        name="survey_result"
+                                        value="nok"
+                                        checked={data.survey_result === 'nok'}
+                                        onChange={(e) => handleFormChange('survey_result', e.currentTarget.value)}
+                                        class="mt-0.5 text-red-600 focus:ring-red-500 w-4 h-4" 
+                                    />
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="block text-sm font-bold text-red-700">NOK</span>
+                                            <Show when={data.survey_result === 'nok'}>
+                                                <span class="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Hentikan Sementara</span>
+                                            </Show>
+                                        </div>
+                                        <span class="block text-xs text-slate-500">Site tidak layak sementara</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <Show when={data.survey_result === 'nok'}>
+                             <div class="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                                 <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 p-3 rounded">
+                                     <AlertTriangleIcon class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                     <p class="text-xs font-medium text-amber-800 leading-relaxed">
+                                         ⚠ Site akan ditandai Survey NOK. <br/>
+                                         Proses akan berhenti di sini sampai direset oleh Operational/Admin.
+                                     </p>
+                                 </div>
+                                 <div class="pt-2">
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1">Alasan NOK <span class="text-red-500">*</span></label>
+                                    <textarea 
+                                        required
+                                        rows={3}
+                                        value={(data.survey_nok_reason as string) || ''}
+                                        onChange={(e) => handleFormChange('survey_nok_reason', e.currentTarget.value)}
+                                        class="w-full px-3 py-2 border border-red-300 rounded focus:border-red-500 text-sm bg-white"
+                                        placeholder="Jelaskan alasan site tidak layak..."
+                                    />
+                                </div>
+                             </div>
+                        </Show>
                     </div>
                 </Match>
                 <Match when={field === 'file_upload'}>
@@ -588,7 +721,9 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 <div class="flex-1">
                                     <span class="block text-xs font-medium text-blue-500 mb-0.5">Move to</span>
                                     <Show when={config()} fallback={<span class="font-bold text-slate-400">Tidak ada next stage</span>}>
-                                        <span class="font-bold text-blue-700">{config()?.nextLabel}</span>
+                                        <span class="font-bold text-blue-700">
+                                            {props.currentStage === 'survey' ? (selectedBranch() === 'survey_nok' ? 'Survey NOK' : 'ERFIN Diproses') : config()?.nextLabel}
+                                        </span>
                                     </Show>
                                 </div>
                             </div>
@@ -712,7 +847,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 disabled={!config() || !isMainFormValid()}
                                 class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded transition-colors text-sm shadow-sm flex items-center gap-2"
                             >
-                                Update Stage {isSubmitting() ? '...' : <ChevronRightIcon class="w-4 h-4" />}
+                                {props.currentStage === 'survey' && selectedBranch() === 'survey_nok' ? 'Tandai NOK' : 'Update Stage'} {isSubmitting() ? '...' : <ChevronRightIcon class="w-4 h-4" />}
                             </button>
                         }>
                             <button
