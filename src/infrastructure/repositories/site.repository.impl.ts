@@ -37,8 +37,11 @@ export class SiteRepositoryImpl implements SiteRepository {
         formData.append('file', request.file);
         formData.append('title', request.title);
 
+        // Extract ID without prefix if it has one
+        const idOnly = siteId.includes(':') ? siteId.split(':').pop()! : siteId;
+
         const response = await apiClient.postFormData<UploadSiteFileResponse>(
-            `/api/sites/${siteId}/upload`,
+            `/api/sites/${idOnly}/upload`,
             formData
         );
         return response.data;
@@ -58,7 +61,10 @@ export class SiteRepositoryImpl implements SiteRepository {
         }
         formData.append('uploaded_by', request.uploaded_by);
 
-        const response = await apiClient.postFormData<CreateEvidenceApiResponse>(`/api/sites/${siteId}/evidence`, formData);
+        // Extract ID without prefix if it has one
+        const idOnly = siteId.includes(':') ? siteId.split(':').pop()! : siteId;
+
+        const response = await apiClient.postFormData<CreateEvidenceApiResponse>(`/api/sites/${idOnly}/evidence`, formData);
         return response.data;
     }
 
@@ -79,6 +85,9 @@ export class SiteRepositoryImpl implements SiteRepository {
 
     async updateStage(siteId: string, request: UpdateSiteStageRequest): Promise<Site> {
         const formData = new FormData();
+
+        // Extract ID without prefix if it has one
+        const idOnly = siteId.includes(':') ? siteId.split(':').pop()! : siteId;
 
         // Add all fields from request to formData
         Object.keys(request).forEach(key => {
@@ -106,7 +115,7 @@ export class SiteRepositoryImpl implements SiteRepository {
             });
         }
 
-        const response = await apiClient.postFormData<ApiResponse<Site>>(`/api/sites/${siteId}/stage`, formData);
+        const response = await apiClient.patchFormData<ApiResponse<Site>>(`/api/sites/${idOnly}/stage`, formData);
         return response.data;
     }
 }

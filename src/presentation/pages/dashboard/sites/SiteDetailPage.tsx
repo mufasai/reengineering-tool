@@ -28,6 +28,7 @@ const DollarSign = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class
 const FileText = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="16" x2="8" y1="13" y2="13" /><line x1="16" x2="8" y1="17" y2="17" /><line x1="10" x2="8" y1="9" y2="9" /></svg>;
 const Upload = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>;
 const CheckCircle2 = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" /><path d="m9 12 2 2 4-4" /></svg>;
+const Check = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>;
 const ImageIcon = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg>;
 const Send = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>;
 const Edit = (props: any) => <svg xmlns="http://www.w3.org/2000/svg" class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>;
@@ -63,13 +64,19 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     // Site Evidence Preview State
     const [selectedEvidence, setSelectedEvidence] = createSignal<SiteEvidence | null>(null);
     const [isEvidencePreviewOpen, setIsEvidencePreviewOpen] = createSignal(false);
+    const [dummyStage, setDummyStage] = createSignal<string | null>(null);
 
     // Data Resolution
     const [siteDetail, { refetch: refetchSite }] = createResource(() => props.siteId, (id) => getSiteById.execute(id));
     const [siteFiles, { refetch: refetchFiles }] = createResource(() => props.siteId, (id) => siteRepository.getFiles(id));
     const [siteEvidenceData, { refetch: refetchEvidence }] = createResource(() => props.siteId, (id) => getSiteEvidence.execute(id));
 
-    const site = createMemo(() => siteDetail());
+    const site = createMemo(() => {
+        const baseSite = siteDetail();
+        if (!baseSite) return null;
+        if (dummyStage()) return { ...baseSite, stage: dummyStage()! };
+        return baseSite;
+    });
     const project = createMemo(() => projects.find(p => p.id === site()?.project_id) || projects[0]);
     const team = createMemo(() => teams.find(t => t.name === (site() as any)?.team_assigned));
     const materials = createMemo(() => siteBoQRecords.filter(m => m.siteId === props.siteId));
@@ -80,37 +87,30 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     const stageHistory = createMemo(() => siteStageLogs.filter(l => l.site_master_id === props.siteId));
     const files = createMemo(() => siteFiles() || []);
 
-    const stages: any[] = [
-        { id: 'assigned', label: 'Assigned' },
-        { id: 'survey', label: 'Survey' },
-        { id: 'erfin_process', label: 'ERFIN' },
-        { id: 'permit_process', label: 'Permit' },
-        { id: 'akses_process', label: 'Akses' },
-        { id: 'implementasi', label: 'Implementasi' },
-        { id: 'bast', label: 'BAST' },
-        { id: 'invoice', label: 'Invoice' },
-        { id: 'completed', label: 'Selesai' }
+    const STAGE_GROUPS = [
+        { label: 'Assigned', keys: ['assigned'] },
+        { label: 'Survey', keys: ['survey', 'survey_nok'] },
+        { label: 'ERFIN', keys: ['erfin_process', 'erfin_ready'] },
+        { label: 'Permit', keys: ['permit_process', 'permit_ready'] },
+        { label: 'Akses', keys: ['akses_process', 'akses_ready'] },
+        { label: 'Implementasi', keys: ['implementasi', 'rfi_done', 'rfs_done', 'dokumen_done'] },
+        { label: 'BAST', keys: ['bast'] },
+        { label: 'Invoice', keys: ['invoice'] },
+        { label: 'Completed', keys: ['completed'] }
     ];
 
-    const currentStageIndex = createMemo(() => {
+    const activeIndex = createMemo(() => {
         const s = site()?.stage;
-        if (s === 'imported') return -1;
-        const idx = stages.findIndex(st => 
-            st.id === s || 
-            (st.id === 'survey' && s === 'survey_nok') ||
-            (st.id === 'erfin_process' && s === 'erfin_ready') ||
-            (st.id === 'permit_process' && s === 'permit_ready') || 
-            (st.id === 'akses_process' && s === 'akses_ready') ||
-            (st.id === 'implementasi' && (s === 'rfi_done' || s === 'rfs_done' || s === 'dokumen_done'))
-        );
-        return idx;
+        if (!s || s === 'imported') return 0;
+        const idx = STAGE_GROUPS.findIndex(group => group.keys.includes(s));
+        return idx === -1 ? 0 : idx;
     });
 
+    const currentStageIndex = activeIndex; // Alias for backward compatibility if needed
+
     const handleUpdateStage = (newStage: string, notes?: string) => {
-        console.log('Stage transition triggered:', { newStage, notes });
-        // Site details are updated by the modal directly via API
-        // Here we just need to ensure the parent state is synced
-        refetchSite();
+        console.log('Stage transition triggered (Dummy Mode):', { newStage, notes });
+        setDummyStage(newStage);
         setIsUpdateModalOpen(false);
     };
 
@@ -299,61 +299,122 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                         </div>
                     </div>
 
-                    {/* Stepper Stage Area */}
-                    <div class="bg-white rounded-xl border-t-4 border-t-blue-500 shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="p-8 overflow-x-auto">
-                            <div class="min-w-[800px] flex items-center justify-between relative px-10">
-                                {/* Progress Bar Background */}
-                                <div class="absolute top-[18px] left-[60px] right-[60px] h-0.5 bg-slate-100 -z-0"></div>
-
-                                {/* Progress Bar Active */}
-                                <div
-                                    class="absolute top-[18px] left-[60px] h-0.5 bg-emerald-500 transition-all duration-500 -z-0"
-                                    style={{
-                                        width: `${currentStageIndex() > 0 ? (((currentStageIndex()) / (stages.length - 1)) * 100) : 0}%`,
-                                        "max-width": "calc(100% - 120px)"
-                                    }}
-                                ></div>
-
-                                <For each={stages}>
-                                    {(st, index) => {
-                                        const isCompleted = index() < currentStageIndex();
-                                        const isCurrent = index() === currentStageIndex();
-                                        const isPending = index() > currentStageIndex();
-
+                    {/* Advanced Stage Stepper Section */}
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm border-t-4 border-t-blue-500 p-8 pt-10 pb-16">
+                        <div class="flex items-center justify-between relative px-2">
+                            {/* Connecting Lines Context */}
+                            <div class="absolute top-4 left-0 w-full h-0.5 z-0 flex rounded-full overflow-hidden px-10">
+                                <For each={STAGE_GROUPS}>
+                                    {(_, idx) => {
+                                        if (idx() === STAGE_GROUPS.length - 1) return null;
+                                        const isCompletedLine = activeIndex() > idx();
                                         return (
-                                            <div class="flex flex-col items-center gap-2 z-10 w-24 translate-y-[-2px]">
-                                                <div class={clsx(
-                                                    "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 border-2 font-bold text-sm shadow-sm",
-                                                    isCompleted ? "bg-emerald-500 border-emerald-500 text-white" :
-                                                        isCurrent ? "bg-white border-blue-500 text-blue-600 ring-4 ring-blue-50" :
-                                                            "bg-white border-slate-200 text-slate-300"
-                                                )}>
-                                                    <Show when={isCompleted} fallback={index() + 1}>
-                                                        <CheckCircle2 class="w-6 h-6" />
-                                                    </Show>
-                                                </div>
-                                                <div class="flex flex-col items-center">
-                                                    <span class={clsx(
-                                                        "text-xs font-bold text-center tracking-tight",
-                                                        isCurrent ? "text-blue-700" : isCompleted ? "text-slate-700" : "text-slate-400"
-                                                    )}>
-                                                        {st.label}
-                                                    </span>
-                                                    <Show when={isCompleted || isCurrent}>
-                                                        <span class={clsx(
-                                                            "text-[10px] font-semibold mt-0.5",
-                                                            isCompleted ? "text-emerald-600" : "text-blue-500"
-                                                        )}>
-                                                            {isCurrent ? '0 hr di stage ini' : (site()?.stage_updated_at ? new Date(site()!.stage_updated_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '12 Mar')}
-                                                        </span>
-                                                    </Show>
-                                                </div>
+                                            <div class="flex-1 h-full flex items-center justify-center">
+                                                <div class={clsx("w-full h-full transition-all duration-700", isCompletedLine ? "bg-emerald-500" : "bg-slate-100")} />
                                             </div>
                                         );
                                     }}
                                 </For>
                             </div>
+
+                            <For each={STAGE_GROUPS}>
+                                {(group, idx) => {
+                                    const isPast = createMemo(() => activeIndex() > idx());
+                                    const isCurrent = createMemo(() => activeIndex() === idx());
+                                    const isReached = createMemo(() => isPast() || isCurrent());
+
+                                    const isPermitGroup = group.label === 'Permit';
+                                    const eData = createMemo(() => (site() as any)?.extra_data || {});
+                                    const permitExpiry = createMemo(() => (eData() as any)?.permit_expiry_date);
+
+                                    // Find the date this stage group was reached
+                                    const reachedDate = createMemo(() => {
+                                        const groupLogs = stageHistory().filter(log => group.keys.includes(log.to_stage));
+                                        if (groupLogs.length === 0) return null;
+                                        // Sort to find earliest entry
+                                        groupLogs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+                                        return new Date(groupLogs[0].created_at);
+                                    });
+
+                                    const permitInfo = createMemo(() => {
+                                        let permitDaysText = null;
+                                        let permitDaysColor = 'text-slate-500';
+                                        let permitNodeColorOverride = null;
+                                        let permitNodeTextOverride = null;
+
+                                        if (isPermitGroup && permitExpiry()) {
+                                            const daysLeft = Math.floor((new Date(permitExpiry()).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+                                            if (daysLeft < 0) {
+                                                permitDaysText = `✗ Kedaluwarsa ${new Date(permitExpiry()).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+                                                permitDaysColor = 'text-red-600 font-bold';
+                                                permitNodeColorOverride = 'border-red-500 ring-4 ring-red-100 bg-red-50';
+                                                permitNodeTextOverride = 'text-red-600 font-bold';
+                                            } else if (daysLeft <= 14) {
+                                                permitDaysText = `⚠ Berlaku s/d ${new Date(permitExpiry()).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+                                                permitDaysColor = 'text-amber-600 font-bold';
+                                                permitNodeColorOverride = 'border-amber-500 ring-4 ring-amber-100 bg-amber-50';
+                                                permitNodeTextOverride = 'text-amber-600 font-bold';
+                                            } else {
+                                                permitDaysText = `Berlaku s/d ${new Date(permitExpiry()).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+                                                permitDaysColor = 'text-slate-500';
+                                            }
+                                        }
+
+                                        return { permitDaysText, permitDaysColor, permitNodeColorOverride, permitNodeTextOverride };
+                                    });
+
+                                    // Node Appearance
+                                    let nodeClass = createMemo(() => {
+                                        if (isPast()) return "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20";
+                                        if (isCurrent()) {
+                                            return permitInfo().permitNodeColorOverride || "bg-white text-blue-600 border-blue-500 ring-4 ring-blue-100 animate-pulse";
+                                        }
+                                        return "bg-white text-slate-300 border-slate-200";
+                                    });
+
+                                    let textClass = createMemo(() => {
+                                        if (isPast()) return "text-slate-700 font-bold";
+                                        if (isCurrent()) return permitInfo().permitNodeTextOverride || "text-blue-700 font-extrabold";
+                                        return "text-slate-400";
+                                    });
+
+                                    return (
+                                        <div class="relative z-10 flex flex-col items-center group">
+                                            <div class={clsx(
+                                                "w-8 h-8 rounded-full flex items-center justify-center border-[3px] shadow-sm mb-3 font-bold text-xs transition-all duration-500",
+                                                nodeClass()
+                                            )}>
+                                                <Show when={isPast()} fallback={idx() + 1}>
+                                                    <CheckCircle2 class="w-5 h-5 text-white" />
+                                                </Show>
+                                            </div>
+                                            <span class={clsx("text-[11px] font-bold whitespace-nowrap transition-colors duration-300", textClass())}>
+                                                {group.label}
+                                            </span>
+
+                                            {/* Meta texts beneath */}
+                                            <div class="absolute top-16 w-38 text-center flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 lg:opacity-100 transition-opacity duration-300">
+                                                {/* Line 1: Date reached */}
+                                                <Show when={isReached() && reachedDate()}>
+                                                    <span class="text-[10px] text-slate-500 whitespace-nowrap bg-white/90 px-1.5 py-0.5 rounded border border-slate-100 shadow-sm mb-1 uppercase tracking-tighter">
+                                                        {reachedDate()!.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                    </span>
+                                                </Show>
+
+                                                {/* Line 2: Permit Expiry if applicable */}
+                                                <Show when={isReached() && isPermitGroup && permitInfo().permitDaysText}>
+                                                    <span class={clsx(
+                                                        "text-[9px] mt-0.5 whitespace-nowrap bg-white/90 px-1.5 py-0.5 rounded border border-slate-100 shadow-sm font-semibold uppercase tracking-tighter",
+                                                        permitInfo().permitDaysColor
+                                                    )}>
+                                                        {permitInfo().permitDaysText}
+                                                    </span>
+                                                </Show>
+                                            </div>
+                                        </div>
+                                    );
+                                }}
+                            </For>
                         </div>
                     </div>
 

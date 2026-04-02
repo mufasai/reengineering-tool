@@ -25,6 +25,7 @@ import CreateMaterialModal from './components/CreateMaterialModal';
 import AddTeamModal from './components/AddTeamModal';
 import FilterPaymentSection from './components/FilterPaymentSection';
 import CostsPaymentSection from './components/CostsPaymentSection';
+import UpdateStageModal from '../../../components/modals/UpdateStageModal';
 
 interface SiteDetailPageProps {
     site: Site;
@@ -165,6 +166,13 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     const [deleteTeamTarget, setDeleteTeamTarget] = createSignal<{ id: string; name: string } | null>(null);
     const [deletingTeam, setDeletingTeam] = createSignal(false);
 
+    // Stage update modal state
+    const [showUpdateStageModal, setShowUpdateStageModal] = createSignal(false);
+    const [currentSite, setCurrentSite] = createSignal<Site>(props.site);
+
+    // Dummy state for testing stage progression
+    const [dummyStage, setDummyStage] = createSignal('imported'); // Start with imported for testing
+
     // Materials data from API
     const [materials, setMaterials] = createSignal<Material[]>([]);
     const [loadingMaterials, setLoadingMaterials] = createSignal(false);
@@ -176,6 +184,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
 
     // Load materials and site files on mount
     onMount(() => {
+        setCurrentSite(props.site); // Initialize current site
         loadMaterials();
         loadSiteFiles();
         loadAllTerminStatuses();
@@ -289,6 +298,105 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
         } finally {
             setDeletingTeam(false);
         }
+    };
+
+    // Handle stage update
+    const handleUpdateStage = async (newStage: string, notes?: string, payload?: Record<string, any>) => {
+        try {
+            console.log('=== STAGE UPDATE ===');
+            console.log('From:', dummyStage());
+            console.log('To:', newStage);
+            console.log('Notes:', notes);
+            console.log('Payload:', payload);
+
+            // Update dummy stage
+            setDummyStage(newStage);
+
+            // Update local site state
+            const updatedSite = { ...currentSite(), stage: newStage };
+            setCurrentSite(updatedSite);
+
+            console.log('Stage updated successfully to:', newStage);
+            alert(`✅ Stage berhasil diupdate ke: ${newStage}\n\nNotes: ${notes || 'Tidak ada catatan'}`);
+
+            // Close modal
+            setShowUpdateStageModal(false);
+        } catch (error) {
+            console.error('Failed to update stage:', error);
+            alert('❌ Gagal mengupdate stage. Silakan coba lagi.');
+        }
+    };
+
+    // Get stage steps for progress stepper (excluding 'imported' since it's already done when viewing detail)
+    const getStageSteps = () => {
+        const projectType = 'RESCOPING'; // You can get this from props or site data
+
+        if (projectType === 'RESCOPING') {
+            return [
+                { id: 'assigned', name: 'Assigned', description: 'Assign tim lapangan' },
+                { id: 'survey', name: 'Survey', description: 'Site survey' },
+                { id: 'erfin_process', name: 'ERFIN Process', description: 'ERFIN processing' },
+                { id: 'erfin_ready', name: 'ERFIN Ready', description: 'ERFIN completed' },
+                { id: 'permit_process', name: 'Permit Process', description: 'Permit processing' },
+                { id: 'permit_ready', name: 'Permit Ready', description: 'Permit obtained' },
+                { id: 'akses_process', name: 'Akses Process', description: 'Access processing' },
+                { id: 'akses_ready', name: 'Akses Ready', description: 'Access ready' },
+                { id: 'implementasi', name: 'Implementasi', description: 'Implementation' },
+                { id: 'rfi_done', name: 'RFI Done', description: 'RFI completed' },
+                { id: 'dokumen_done', name: 'Dokumen Done', description: 'Documents submitted' },
+                { id: 'bast', name: 'BAST', description: 'Handover completed' },
+                { id: 'invoice', name: 'Invoice', description: 'Invoice sent' },
+                { id: 'completed', name: 'Completed', description: 'All work completed' }
+            ];
+        } else {
+            return [
+                { id: 'assigned', name: 'Assigned', description: 'Assign tim lapangan' },
+                { id: 'survey', name: 'Survey', description: 'Site survey' },
+                { id: 'erfin_process', name: 'ERFIN Process', description: 'ERFIN processing' },
+                { id: 'erfin_ready', name: 'ERFIN Ready', description: 'ERFIN completed' },
+                { id: 'permit_process', name: 'Permit Process', description: 'Permit processing' },
+                { id: 'permit_ready', name: 'Permit Ready', description: 'Permit obtained' },
+                { id: 'akses_process', name: 'Akses Process', description: 'Access processing' },
+                { id: 'akses_ready', name: 'Akses Ready', description: 'Access ready' },
+                { id: 'implementasi', name: 'Implementasi', description: 'Implementation' },
+                { id: 'rfs_done', name: 'RFS Done', description: 'Ready for service' },
+                { id: 'dokumen_done', name: 'Dokumen Done', description: 'Documents submitted' },
+                { id: 'bast', name: 'BAST', description: 'Handover completed' },
+                { id: 'invoice', name: 'Invoice', description: 'Invoice sent' },
+                { id: 'completed', name: 'Completed', description: 'All work completed' }
+            ];
+        }
+    };
+
+    // Get current step index and status
+    const getCurrentStepIndex = () => {
+        const steps = getStageSteps();
+        const currentStage = dummyStage(); // Use dummy stage for testing
+
+        // If site is still in 'imported' stage, show as step -1 (before first step)
+        if (currentStage === 'imported') {
+            return -1;
+        }
+
+        return steps.findIndex(step => step.id === currentStage);
+    };
+
+    const getStepStatus = (stepIndex: number) => {
+        const currentIndex = getCurrentStepIndex();
+
+        // If site is still in 'imported' stage, all steps are pending
+        if (currentIndex === -1) {
+            return 'pending';
+        }
+
+        if (stepIndex < currentIndex) return 'completed';
+        if (stepIndex === currentIndex) return 'active';
+        return 'pending';
+    };
+
+    // Check if we should show the "Assign Team" button for imported sites
+    const shouldShowAssignTeamButton = () => {
+        return dummyStage() === 'imported' && (canEdit() || isTeamLeader());
     };
 
     // Check if previous termin is approved
@@ -698,87 +806,197 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
 
                 {/* Progress Pekerjaan */}
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                    <h2 class="text-lg font-bold text-slate-900 mb-2">Progress Pekerjaan</h2>
-                    <p class="text-sm text-slate-500 mb-6">Progress: 1 dari 4 step</p>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-slate-900">Progress Pekerjaan</h2>
+                        {/* Testing Controls */}
+                        <div class="flex items-center gap-2">
+                            <button
+                                onClick={() => {
+                                    setDummyStage('imported');
+                                    setCurrentSite({ ...currentSite(), stage: 'imported' });
+                                }}
+                                class="px-3 py-1 bg-slate-500 hover:bg-slate-600 text-white text-xs font-semibold rounded transition-all"
+                            >
+                                🔄 Reset to Imported
+                            </button>
+                            <button
+                                onClick={() => {
+                                    console.log('=== MANUAL DEBUG ===');
+                                    console.log('Current dummyStage:', dummyStage());
+                                    console.log('Current site stage:', currentSite().stage);
+                                    console.log('Project type sent to modal: RESCOPING');
+                                }}
+                                class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded transition-all"
+                            >
+                                🐛 Debug Info
+                            </button>
+                            <span class="text-xs text-slate-500">Testing Mode</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500 mb-6">
+                        Current Stage: {dummyStage() === 'imported' ? 'Imported (Ready to Assign Team)' : dummyStage()}
+                    </p>
 
                     {/* Overall Progress Bar */}
                     <div class="mb-8">
                         <div class="relative">
                             <div class="w-full bg-slate-200 rounded-full h-2.5">
-                                <div class="bg-blue-500 h-2.5 rounded-full transition-all" style={{ width: '0%' }} />
+                                <div
+                                    class="bg-blue-500 h-2.5 rounded-full transition-all"
+                                    style={{
+                                        width: `${getCurrentStepIndex() === -1 ? 0 : ((getCurrentStepIndex() + 1) / getStageSteps().length) * 100}%`
+                                    }}
+                                />
                             </div>
-                            <span class="absolute -right-1 -top-6 text-xs font-semibold text-slate-600">0%</span>
+                            <span class="absolute -right-1 -top-6 text-xs font-semibold text-slate-600">
+                                {getCurrentStepIndex() === -1 ? 0 : Math.round(((getCurrentStepIndex() + 1) / getStageSteps().length) * 100)}%
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Show Assign Team Button if site is still imported */}
+                    <Show when={shouldShowAssignTeamButton()}>
+                        <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-semibold text-blue-900 mb-1">Site Ready to Assign</h3>
+                                    <p class="text-sm text-blue-700">Site sudah diimport dan siap untuk ditugaskan ke tim lapangan.</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowUpdateStageModal(true)}
+                                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                                    </svg>
+                                    Assign Team
+                                </button>
+                            </div>
+                        </div>
+                    </Show>
+
+                    {/* Stage Progression Info for Testing */}
+                    <div class="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-slate-700">Stage Progression (Testing Mode)</h4>
+                            <span class="text-xs text-slate-500">
+                                Step {getCurrentStepIndex() + 2} of {getStageSteps().length + 1}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-xs">
+                            <div>
+                                <span class="font-medium text-slate-600">Current:</span>
+                                <span class="ml-2 px-2 py-1 bg-blue-100 text-blue-700 rounded font-semibold">
+                                    {dummyStage()}
+                                </span>
+                            </div>
+                            <div>
+                                <span class="font-medium text-slate-600">Next:</span>
+                                <span class="ml-2 text-slate-500">
+                                    {getCurrentStepIndex() === -1 ? 'assigned' :
+                                        getCurrentStepIndex() === getStageSteps().length - 1 ? 'completed' :
+                                            getStageSteps()[getCurrentStepIndex() + 1]?.id || 'N/A'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* All Stages List */}
+                        <div class="mt-3 pt-3 border-t border-slate-200">
+                            <p class="text-xs font-medium text-slate-600 mb-2">All Stages:</p>
+                            <div class="flex flex-wrap gap-1">
+                                <span class={`px-2 py-1 rounded text-xs font-medium ${dummyStage() === 'imported' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                                    }`}>
+                                    imported
+                                </span>
+                                <For each={getStageSteps()}>
+                                    {(step, index) => {
+                                        const status = getStepStatus(index());
+                                        return (
+                                            <span class={`px-2 py-1 rounded text-xs font-medium ${status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                                status === 'active' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-slate-100 text-slate-500'
+                                                }`}>
+                                                {step.id}
+                                            </span>
+                                        );
+                                    }}
+                                </For>
+                            </div>
                         </div>
                     </div>
 
                     <div class="space-y-4">
-                        <For each={getTermins()}>
-                            {(termin, index) => (
-                                <div class="relative flex gap-4">
-                                    {/* Step Number - Outside card */}
-                                    <div class="relative flex-shrink-0">
-                                        <div class={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${getStatusColor(termin.status)} shadow-md z-10 relative`}>
-                                            {termin.id}
-                                        </div>
+                        <For each={getStageSteps()}>
+                            {(step, index) => {
+                                const status = getStepStatus(index());
+                                const isCurrentStep = index() === getCurrentStepIndex();
 
-                                        {/* Connector Line - Outside card */}
-                                        {index() < getTermins().length - 1 && (
-                                            <div class="absolute left-1/2 top-12 w-0.5 bg-slate-300 -translate-x-1/2" style={{ height: 'calc(100% + 1rem)' }} />
-                                        )}
-                                    </div>
-
-                                    {/* Card Content */}
-                                    <div class={`flex-1 border-2 ${getStatusBorderColor(termin.status)} rounded-xl p-4 ${termin.status === 'active' || termin.status === 'completed' ? 'bg-blue-50' : 'bg-white'}`}>
-                                        <div class="mb-2">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                <span class="font-bold text-slate-900">{termin.name}</span>
-                                                <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-semibold">
-                                                    {termin.percentage}%
-                                                </span>
-                                                {/* Only show progress badge for Termin 1 and not completed */}
-                                                {termin.id === 1 && termin.status !== 'completed' && (
-                                                    <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">
-                                                        Progress: {termin.progress}%
-                                                    </span>
+                                return (
+                                    <div class="relative flex gap-4">
+                                        {/* Step Number - Outside card */}
+                                        <div class="relative flex-shrink-0">
+                                            <div class={`w-12 h-12 rounded-full flex items-center justify-center text-white z-10 relative transition-all duration-700 ${status === 'completed' ? 'bg-emerald-500 shadow-[0_4px_10px_rgba(16,185,129,0.3)]' :
+                                                status === 'active' ? 'bg-blue-500 shadow-md scale-110' : 'bg-slate-300'
+                                                }`}>
+                                                {status === 'completed' ? (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                                                        <polyline points="20 6 9 17 4 12" />
+                                                    </svg>
+                                                ) : (
+                                                    <span class="font-black">{index() + 1}</span>
                                                 )}
                                             </div>
 
-                                            <p class="text-xs text-slate-500 mb-3">{termin.description}</p>
-
-                                            {/* Status and Button - Below termin name */}
-                                            {(termin.status === 'active' || termin.status === 'completed') && (
-                                                <div class="flex items-center gap-2">
-                                                    <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-semibold">
-                                                        {getTerminStatusText(termin.id)}
-                                                    </span>
-                                                    {/* Button logic:
-                                                        - If termin submitted: ALL users see "View" button
-                                                        - If termin NOT submitted AND user can edit (admin/management/team_leader): show "Ajukan Termin" button
-                                                        - If termin NOT submitted AND user is read-only: show nothing
-                                                    */}
-                                                    {isTerminSubmitted(termin.id) ? (
-                                                        // Termin already submitted - everyone sees "View"
-                                                        <button
-                                                            onClick={() => handleAjukanTermin(termin.id)}
-                                                            class="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all"
-                                                        >
-                                                            View
-                                                        </button>
-                                                    ) : (canEdit() || isTeamLeader()) ? (
-                                                        // Termin not submitted yet - only users who can edit see "Ajukan Termin"
-                                                        <button
-                                                            onClick={() => handleAjukanTermin(termin.id)}
-                                                            class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-all"
-                                                        >
-                                                            Ajukan Termin {termin.id}
-                                                        </button>
-                                                    ) : null}
-                                                </div>
+                                            {/* Connector Line - Outside card */}
+                                            {index() < getStageSteps().length - 1 && (
+                                                <div class={`absolute left-1/2 top-12 w-0.5 -translate-x-1/2 transition-all duration-700 ${status === 'completed' ? 'bg-emerald-400' : 'bg-slate-200'
+                                                    }`} style={{ height: 'calc(100% + 1rem)' }} />
                                             )}
                                         </div>
+
+                                        {/* Card Content */}
+                                        <div class={`flex-1 border-2 rounded-xl p-4 ${status === 'completed' ? 'border-emerald-500 bg-emerald-50' :
+                                            status === 'active' ? 'border-blue-500 bg-blue-50' :
+                                                'border-slate-300 bg-white'
+                                            }`}>
+                                            <div class="mb-2">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="font-bold text-slate-900">{step.name}</span>
+                                                        {status === 'completed' && (
+                                                            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold">
+                                                                Completed
+                                                            </span>
+                                                        )}
+                                                        {status === 'active' && (
+                                                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">
+                                                                Current
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Update Stage Button - Only show for current step and if user can edit */}
+                                                    {isCurrentStep && (canEdit() || isTeamLeader()) && (
+                                                        <button
+                                                            onClick={() => setShowUpdateStageModal(true)}
+                                                            class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                                                            </svg>
+                                                            {step.id === 'assigned' ? 'Assign Team' : 'Update Stage'}
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                <p class="text-xs text-slate-500 mb-3">{step.description}</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            }}
                         </For>
                     </div>
                 </div>
@@ -966,6 +1184,17 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                     </div>
                 </div>
             </Show>
+
+            {/* Update Stage Modal */}
+            <UpdateStageModal
+                isOpen={showUpdateStageModal()}
+                onClose={() => setShowUpdateStageModal(false)}
+                siteId={currentSite().id}
+                siteName={currentSite().site_name}
+                projectType="RESCOPING" // You can make this dynamic based on project data
+                currentStage={dummyStage() === 'imported' ? 'imported' : dummyStage()}
+                onUpdateStage={handleUpdateStage}
+            />
         </Show>
     );
 };

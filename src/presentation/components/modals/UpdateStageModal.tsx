@@ -8,6 +8,7 @@ import { UpdateSiteStageInteractor } from '../../../application/use-cases/update
 import { authStore } from '../../store/auth.store';
 import type { Team } from '../../../domain/entities/team.entity';
 import type { UpdateSiteStageRequest } from '../../../domain/entities/work-order.entity';
+import { mockTeams, mockPeople, mockTeamMembers } from '../../pages/dashboard/data/mockTeams';
 
 // Helper for classes
 const clsx = (...classes: any[]) => classes.flat().filter(Boolean).join(' ');
@@ -82,8 +83,8 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
     'assigned→permit_process': {
         nextLabel: 'Permit Diproses',
         helper: 'Catat tanggal pengajuan permit ke TPAS.',
-        fields: ['permit_date'],
-        requiredFields: ['permit_date'],
+        fields: ['permit_create_date'],
+        requiredFields: ['permit_create_date'],
         paymentNote: null
     },
     'assigned→survey': {
@@ -110,8 +111,8 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
     'erfin_ready→permit_process': {
         nextLabel: 'Permit Diproses',
         helper: 'Catat tanggal pengajuan permit ke TPAS.',
-        fields: ['permit_date'],
-        requiredFields: ['permit_date'],
+        fields: ['permit_create_date'],
+        requiredFields: ['permit_create_date'],
         paymentNote: null
     },
     'permit_process→permit_ready': {
@@ -194,19 +195,39 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
 };
 
 const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
+    console.log('=== MODAL PROPS DEBUG ===');
+    console.log('Current Stage:', props.currentStage);
+    console.log('Project Type:', props.projectType);
+    console.log('Site ID:', props.siteId);
+    console.log('Site Name:', props.siteName);
+
     const [selectedBranch, setSelectedBranch] = createSignal<string>('');
 
     const getNextStages = () => {
+        console.log('=== GET NEXT STAGES DEBUG ===');
+        console.log('Current Stage:', props.currentStage);
+        console.log('Project Type:', props.projectType);
+
         if (props.currentStage === 'survey') return ['erfin_process', 'survey_nok'];
-        
+
         // As per user request, standard flow also goes to Survey -> ERFIN now
         const ppl = props.projectType === 'RESCOPING'
             ? ['imported', 'assigned', 'survey', 'erfin_process', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfi_done', 'dokumen_done', 'bast', 'invoice', 'completed']
             : ['imported', 'assigned', 'survey', 'erfin_process', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfs_done', 'dokumen_done', 'bast', 'invoice', 'completed'];
-            
+
+        console.log('Pipeline:', ppl);
+
         const currentIndex = ppl.indexOf(props.currentStage);
-        if (currentIndex === -1 || currentIndex === ppl.length - 1) return [];
-        return [ppl[currentIndex + 1]];
+        console.log('Current Index:', currentIndex);
+
+        if (currentIndex === -1 || currentIndex === ppl.length - 1) {
+            console.log('No next stages available');
+            return [];
+        }
+
+        const nextStages = [ppl[currentIndex + 1]];
+        console.log('Next Stages:', nextStages);
+        return nextStages;
     };
 
     const nextLogicalStageId = createMemo(() => {
@@ -215,10 +236,26 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
     });
 
     const transitionKey = createMemo(() => {
-        return `${props.currentStage}→${props.currentStage === 'survey' ? 'erfin_process' : nextLogicalStageId()}`;
+        const nextStage = nextLogicalStageId();
+        const key = `${props.currentStage}→${nextStage}`;
+        console.log('=== TRANSITION DEBUG ===');
+        console.log('Current Stage:', props.currentStage);
+        console.log('Next Stage:', nextStage);
+        console.log('Transition Key:', key);
+        console.log('Config Found:', !!STAGE_TRANSITION_CONFIG[key]);
+        return key;
     });
-    
-    const config = createMemo(() => STAGE_TRANSITION_CONFIG[transitionKey()]);
+
+    const config = createMemo(() => {
+        const key = transitionKey();
+        const configFound = STAGE_TRANSITION_CONFIG[key];
+        console.log('=== CONFIG DEBUG ===');
+        console.log('Transition Key:', key);
+        console.log('Config Found:', !!configFound);
+        console.log('Config:', configFound);
+        console.log('Available Configs:', Object.keys(STAGE_TRANSITION_CONFIG));
+        return configFound;
+    });
 
     // Form State
     const [notes, setNotes] = createSignal('');
@@ -228,7 +265,9 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     // Dynamic Fields State
     const [formData, setFormData] = createSignal<Record<string, any>>({
-        permit_date: new Date().toISOString().split('T')[0] // default today
+        survey_date: new Date().toISOString().split('T')[0], // default today for survey
+        permit_create_date: new Date().toISOString().split('T')[0], // default today for permit creation
+        permit_date: new Date().toISOString().split('T')[0] // default today for other permit fields
     });
 
     // Files State
@@ -242,9 +281,8 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     onMount(async () => {
         try {
-            const teamRepo = new TeamRepositoryImpl();
-            const teamsData = await teamRepo.findAll();
-            setTeams(teamsData);
+            // Use mock data for testing
+            setTeams(mockTeams as any[]);
         } catch (err) {
             console.error('Failed to fetch teams:', err);
             setFetchError('Gagal mengambil data tim');
@@ -265,7 +303,15 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
     });
 
     const handleFormChange = (key: string, value: any) => {
+        console.log('=== FORM CHANGE DEBUG ===');
+        console.log('Key:', key);
+        console.log('Value:', value);
+        console.log('Previous formData:', formData());
+
         setFormData(prev => ({ ...prev, [key]: value }));
+
+        console.log('New formData will be:', { ...formData(), [key]: value });
+
         if (key === 'survey_result') {
             setSelectedBranch(value === 'nok' ? 'survey_nok' : 'erfin_process');
         }
@@ -307,29 +353,58 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     const isMainFormValid = createMemo(() => {
         const c = config();
-        if (!c) return false;
-        if (hasOversizedFiles()) return false;
-
-        const data = formData();
-
-        if (props.currentStage === 'survey') {
-            if (!data['survey_result']) return false;
-            if (data['survey_result'] === 'nok' && (!data['survey_nok_reason'] || data['survey_nok_reason'].trim() === '')) return false;
+        if (!c) {
+            console.log('❌ Validation: No config found');
+            return false;
+        }
+        if (hasOversizedFiles()) {
+            console.log('❌ Validation: Oversized files');
+            return false;
         }
 
-        if (data['has_akses_gedung'] === true && (!data['gedung_nama'] || data['gedung_nama'] === '')) return false;
+        const data = formData();
+        console.log('=== VALIDATION DEBUG ===');
+        console.log('Form Data:', data);
+        console.log('Required Fields:', c.requiredFields);
+
+        if (props.currentStage === 'survey') {
+            if (!data['survey_result']) {
+                console.log('❌ Validation: Missing survey_result');
+                return false;
+            }
+            if (data['survey_result'] === 'nok' && (!data['survey_nok_reason'] || data['survey_nok_reason'].trim() === '')) {
+                console.log('❌ Validation: Missing survey_nok_reason');
+                return false;
+            }
+        }
+
+        if (data['has_akses_gedung'] === true && (!data['gedung_nama'] || data['gedung_nama'] === '')) {
+            console.log('❌ Validation: Missing gedung_nama');
+            return false;
+        }
 
         for (const req of c.requiredFields) {
             if (req === 'files' && data['survey_result'] === 'nok') continue;
 
             if (req === 'files') {
-                if (files().length === 0) return false;
+                if (files().length === 0) {
+                    console.log('❌ Validation: Missing files');
+                    return false;
+                }
             } else if (req === 'tpas_approved' || req === 'tp_approved' || req.startsWith('konfirmasi_')) {
-                if (!data[req]) return false;
+                if (!data[req]) {
+                    console.log(`❌ Validation: Missing ${req}`);
+                    return false;
+                }
             } else {
-                if (!data[req] || data[req] === '') return false;
+                if (!data[req] || data[req] === '') {
+                    console.log(`❌ Validation: Missing ${req}`, data[req]);
+                    return false;
+                }
             }
         }
+
+        console.log('✅ Validation: All checks passed');
         return true;
     });
 
@@ -351,26 +426,13 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                 setIsSubmitting(true);
                 const nextStage = nextLogicalStageId()!;
 
-                const request: UpdateSiteStageRequest = {
-                    stage: nextStage,
-                    notes: notes(),
-                    changed_by: changedBy,
-                    ...formData(),
-                    // Include files array for form-data upload
-                    files: files()
-                };
-
-                const siteRepo = new SiteRepositoryImpl();
-                const updateStageUseCase = new UpdateSiteStageInteractor(siteRepo);
-
-                await updateStageUseCase.execute(props.siteId, request);
+                // DUMMY MODE - Simulated API delay for local testing
+                await new Promise(resolve => setTimeout(resolve, 800));
 
                 props.onUpdateStage(nextStage, notes(), formData());
                 props.onClose();
             } catch (err: any) {
                 console.error('Failed to update stage:', err);
-                // We'll use the issue format/style for error feedback if needed, 
-                // or just alert for now since we don't have a dedicated error area besides the modal
                 alert(err.message || 'Gagal mengupdate stage. Silakan coba lagi.');
             } finally {
                 setIsSubmitting(false);
@@ -385,19 +447,76 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
         return (
             <Switch>
                 <Match when={field === 'team_select'}>
-                    <div class="space-y-1">
-                        <label class="block text-sm font-medium text-slate-700">Tim <span class="text-red-500">*</span></label>
-                        <select
-                            required
-                            class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm"
-                            value={(data.team_id as string) || ''}
-                            onChange={(e) => handleFormChange('team_id', e.currentTarget.value)}
-                        >
-                            <option value="">Pilih tim lapangan...</option>
-                            <For each={teams()}>
-                                {(t) => <option value={t.id}>{t.nama}</option>}
-                            </For>
-                        </select>
+                    <div class="space-y-4 border p-4 rounded-lg bg-slate-50/50">
+                        <div class="space-y-1">
+                            <label class="block text-sm font-medium text-slate-700">Tim Lapangan <span class="text-red-500">*</span></label>
+                            <select
+                                required
+                                class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                                value={(formData().team_id as string) || ''}
+                                onChange={(e) => {
+                                    handleFormChange('team_id', e.currentTarget.value);
+                                    handleFormChange('field_leader_id', ''); // Reset field leader when team changes
+                                }}
+                            >
+                                <option value="">Pilih tim lapangan...</option>
+                                <For each={teams().filter((t: any) => t.status_aktif)}>
+                                    {(t: any) => (
+                                        <option value={t.id}>
+                                            {t.nama} ({t.project_type})
+                                        </option>
+                                    )}
+                                </For>
+                            </select>
+                        </div>
+
+                        <Show when={formData().team_id}>
+                            <div class="pl-4 border-l-2 border-blue-200 space-y-3 pt-1">
+                                <div class="space-y-1.5 pt-1">
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                        Field Leader <span class="text-red-500">*</span>
+                                    </label>
+                                    <Show
+                                        when={mockTeamMembers.filter(tm =>
+                                            tm.team_id === formData().team_id && tm.role === 'Team Leader'
+                                        ).length > 0}
+                                        fallback={
+                                            <div class="space-y-2">
+                                                <select
+                                                    disabled
+                                                    class="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
+                                                >
+                                                    <option>— Belum ada field leader di tim ini</option>
+                                                </select>
+                                                <div class="flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                                                    <AlertTriangleIcon class="w-4 h-4 shrink-0" />
+                                                    <p>Tim ini belum memiliki field leader. Tambahkan terlebih dahulu di halaman Teams.</p>
+                                                </div>
+                                            </div>
+                                        }
+                                    >
+                                        <select
+                                            required
+                                            class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                                            value={(formData().field_leader_id as string) || ''}
+                                            onChange={(e) => handleFormChange('field_leader_id', e.currentTarget.value)}
+                                        >
+                                            <option value="">Pilih field leader...</option>
+                                            <For each={mockTeamMembers.filter(tm =>
+                                                tm.team_id === formData().team_id && tm.role === 'Team Leader'
+                                            )}>
+                                                {(tm) => {
+                                                    const person = mockPeople.find(p => p.id === tm.person_id);
+                                                    return person ? (
+                                                        <option value={person.id}>{person.name}</option>
+                                                    ) : null;
+                                                }}
+                                            </For>
+                                        </select>
+                                    </Show>
+                                </div>
+                            </div>
+                        </Show>
                     </div>
                 </Match>
                 <Match when={['survey_date', 'erfin_date', 'erfin_ready_date', 'permit_date', 'permit_start_date', 'permit_expiry_date', 'tgl_rencana_impl', 'tgl_aktual_mulai', 'tgl_bast', 'tgl_invoice'].includes(field)}>
@@ -551,13 +670,13 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                             <label class="block text-sm font-semibold text-slate-800">Hasil Survey <span class="text-red-500">*</span></label>
                             <div class="flex flex-col gap-3 p-3 bg-slate-50 border border-slate-200 rounded">
                                 <label class="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-slate-200 transition-colors">
-                                    <input 
-                                        type="radio" 
+                                    <input
+                                        type="radio"
                                         name="survey_result"
                                         value="ok"
                                         checked={data.survey_result === 'ok'}
                                         onChange={(e) => handleFormChange('survey_result', e.currentTarget.value)}
-                                        class="mt-0.5 text-blue-600 focus:ring-blue-500 w-4 h-4" 
+                                        class="mt-0.5 text-blue-600 focus:ring-blue-500 w-4 h-4"
                                     />
                                     <div>
                                         <span class="block text-sm font-bold text-slate-800">OK</span>
@@ -565,13 +684,13 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                     </div>
                                 </label>
                                 <label class="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-slate-200 transition-colors">
-                                    <input 
-                                        type="radio" 
+                                    <input
+                                        type="radio"
                                         name="survey_result"
                                         value="nok"
                                         checked={data.survey_result === 'nok'}
                                         onChange={(e) => handleFormChange('survey_result', e.currentTarget.value)}
-                                        class="mt-0.5 text-red-600 focus:ring-red-500 w-4 h-4" 
+                                        class="mt-0.5 text-red-600 focus:ring-red-500 w-4 h-4"
                                     />
                                     <div>
                                         <div class="flex items-center gap-2">
@@ -587,17 +706,17 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                         </div>
 
                         <Show when={data.survey_result === 'nok'}>
-                             <div class="space-y-2 animate-in slide-in-from-top-2 duration-200">
-                                 <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 p-3 rounded">
-                                     <AlertTriangleIcon class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                     <p class="text-xs font-medium text-amber-800 leading-relaxed">
-                                         ⚠ Site akan ditandai Survey NOK. <br/>
-                                         Proses akan berhenti di sini sampai direset oleh Operational/Admin.
-                                     </p>
-                                 </div>
-                                 <div class="pt-2">
+                            <div class="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                                <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 p-3 rounded">
+                                    <AlertTriangleIcon class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                    <p class="text-xs font-medium text-amber-800 leading-relaxed">
+                                        ⚠ Site akan ditandai Survey NOK. <br />
+                                        Proses akan berhenti di sini sampai direset oleh Operational/Admin.
+                                    </p>
+                                </div>
+                                <div class="pt-2">
                                     <label class="block text-sm font-semibold text-slate-700 mb-1">Alasan NOK <span class="text-red-500">*</span></label>
-                                    <textarea 
+                                    <textarea
                                         required
                                         rows={3}
                                         value={(data.survey_nok_reason as string) || ''}
@@ -606,7 +725,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                         placeholder="Jelaskan alasan site tidak layak..."
                                     />
                                 </div>
-                             </div>
+                            </div>
                         </Show>
                     </div>
                 </Match>
@@ -847,7 +966,12 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 disabled={!config() || !isMainFormValid()}
                                 class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded transition-colors text-sm shadow-sm flex items-center gap-2"
                             >
-                                {props.currentStage === 'survey' && selectedBranch() === 'survey_nok' ? 'Tandai NOK' : 'Update Stage'} {isSubmitting() ? '...' : <ChevronRightIcon class="w-4 h-4" />}
+                                {isSubmitting() ? 'Updating...' : (props.currentStage === 'survey' && selectedBranch() === 'survey_nok' ? 'Tandai NOK' : 'Update Stage')}
+                                {isSubmitting() ? (
+                                    <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                ) : (
+                                    <ChevronRightIcon class="w-4 h-4" />
+                                )}
                             </button>
                         }>
                             <button
