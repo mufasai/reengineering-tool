@@ -37,11 +37,8 @@ export class SiteRepositoryImpl implements SiteRepository {
         formData.append('file', request.file);
         formData.append('title', request.title);
 
-        // Extract ID without prefix if it has one
-        const idOnly = siteId.includes(':') ? siteId.split(':').pop()! : siteId;
-
         const response = await apiClient.postFormData<UploadSiteFileResponse>(
-            `/api/sites/${idOnly}/upload`,
+            `/api/sites/${siteId}/upload`,
             formData
         );
         return response.data;
@@ -61,10 +58,7 @@ export class SiteRepositoryImpl implements SiteRepository {
         }
         formData.append('uploaded_by', request.uploaded_by);
 
-        // Extract ID without prefix if it has one
-        const idOnly = siteId.includes(':') ? siteId.split(':').pop()! : siteId;
-
-        const response = await apiClient.postFormData<CreateEvidenceApiResponse>(`/api/sites/${idOnly}/evidence`, formData);
+        const response = await apiClient.postFormData<CreateEvidenceApiResponse>(`/api/sites/${siteId}/evidence`, formData);
         return response.data;
     }
 
@@ -86,9 +80,6 @@ export class SiteRepositoryImpl implements SiteRepository {
     async updateStage(siteId: string, request: UpdateSiteStageRequest): Promise<Site> {
         const formData = new FormData();
 
-        // Extract ID without prefix if it has one
-        const idOnly = siteId.includes(':') ? siteId.split(':').pop()! : siteId;
-
         // Add all fields from request to formData
         Object.keys(request).forEach(key => {
             const value = request[key];
@@ -96,8 +87,8 @@ export class SiteRepositoryImpl implements SiteRepository {
             // Skip files array - will be handled separately
             if (key === 'files') return;
 
-            // Handle different value types
-            if (value !== null && value !== undefined) {
+            // Only add if value exists (concentrate on filled values)
+            if (value !== null && value !== undefined && value !== '') {
                 if (typeof value === 'boolean') {
                     formData.append(key, value.toString());
                 } else if (typeof value === 'object' && !(value instanceof File)) {
@@ -115,9 +106,10 @@ export class SiteRepositoryImpl implements SiteRepository {
             });
         }
 
-        const response = await apiClient.patchFormData<ApiResponse<Site>>(`/api/sites/${idOnly}/stage`, formData);
+        const response = await apiClient.postFormData<ApiResponse<Site>>(`/api/sites/${siteId}/stage`, formData);
         return response.data;
     }
 }
+
 
 export const siteRepository = new SiteRepositoryImpl();

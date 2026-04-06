@@ -303,29 +303,32 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     // Handle stage update
     const handleUpdateStage = async (newStage: string, notes?: string, payload?: Record<string, any>) => {
         try {
-            console.log('=== STAGE UPDATE ===');
-            console.log('From:', dummyStage());
-            console.log('To:', newStage);
-            console.log('Notes:', notes);
-            console.log('Payload:', payload);
+            console.log('=== STAGE UPDATE HANDLER ===');
+            console.log('Refreshing site data after stage update to:', newStage);
 
-            // Update dummy stage
-            setDummyStage(newStage);
+            // Fetch latest site data to ensure UI is in sync with server
+            const siteIdOnly = props.site.id.includes(':') ? props.site.id.split(':').pop()! : props.site.id;
+            const siteRepository = new SiteRepositoryImpl();
+            const updatedSite = await siteRepository.findById(siteIdOnly);
 
-            // Update local site state
-            const updatedSite = { ...currentSite(), stage: newStage };
+            // Update state
             setCurrentSite(updatedSite);
+            setDummyStage(updatedSite.stage);
 
-            console.log('Stage updated successfully to:', newStage);
-            alert(`✅ Stage berhasil diupdate ke: ${newStage}\n\nNotes: ${notes || 'Tidak ada catatan'}`);
+            console.log('Stage updated and site data refreshed:', updatedSite.stage);
+            alert(`✅ Stage berhasil diupdate ke: ${updatedSite.stage}\n\nNotes: ${notes || 'Tidak ada catatan'}`);
 
             // Close modal
             setShowUpdateStageModal(false);
         } catch (error) {
-            console.error('Failed to update stage:', error);
-            alert('❌ Gagal mengupdate stage. Silakan coba lagi.');
+            console.error('Failed to refresh site data:', error);
+            // Local fallback if refresh fails
+            setDummyStage(newStage);
+            const updatedSite = { ...currentSite(), stage: newStage };
+            setCurrentSite(updatedSite);
         }
     };
+
 
     // Get stage steps for progress stepper (excluding 'imported' since it's already done when viewing detail)
     const getStageSteps = () => {

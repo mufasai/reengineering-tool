@@ -267,7 +267,8 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
     const [formData, setFormData] = createSignal<Record<string, any>>({
         survey_date: new Date().toISOString().split('T')[0], // default today for survey
         permit_create_date: new Date().toISOString().split('T')[0], // default today for permit creation
-        permit_date: new Date().toISOString().split('T')[0] // default today for other permit fields
+        permit_start_date: new Date().toISOString().split('T')[0], // default today for other permit fields
+        permit_expiry_date: new Date().toISOString().split('T')[0]
     });
 
     // Files State
@@ -281,8 +282,9 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     onMount(async () => {
         try {
-            // Use mock data for testing
-            setTeams(mockTeams as any[]);
+            const teamRepo = new TeamRepositoryImpl();
+            const apiTeams = await teamRepo.findAll();
+            setTeams(apiTeams);
         } catch (err) {
             console.error('Failed to fetch teams:', err);
             setFetchError('Gagal mengambil data tim');
@@ -297,7 +299,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
             setIssueNotes('');
             setFiles([]);
             setFormData({
-                permit_date: new Date().toISOString().split('T')[0]
+                permit_create_date: new Date().toISOString().split('T')[0]
             });
         }
     });
@@ -410,14 +412,71 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     const isIssueValid = createMemo(() => issueNotes().trim().length > 0);
 
+    const mapUiToApiFields = (nextStage: string, notes: string, uiData: Record<string, any>): UpdateSiteStageRequest => {
+        // Use 'nama' field from user if available (API teams format), fallback to 'name' or 'System'
+        const changedBy = (authStore.user() as any)?.nama || authStore.user()?.name || 'System';
+        const apiData: UpdateSiteStageRequest = {
+            stage: nextStage,
+            notes: notes,
+            changed_by: changedBy,
+            files: files()
+        };
+
+        // Mapping table
+        const mapping: Record<string, string> = {
+            'permit_create_date': 'stage_permit_date',
+            'tpas_approved': 'stage_tpas_approved',
+            'tp_approved': 'stage_tp_approved',
+            'caf_approved': 'stage_caf_approved',
+            'permit_start_date': 'stage_permit_berlaku',
+            'permit_expiry_date': 'stage_permit_berakhir',
+            'survey_result': 'stage_survey_result',
+            'survey_nok_reason': 'stage_survey_nok_reason',
+            'erfin_number': 'stage_erfin_number',
+            'erfin_date': 'stage_erfin_date',
+            'tower_provider': 'stage_akses_provider',
+            'jenis_kunci': 'stage_akses_kunci',
+            'pic_nama': 'stage_akses_pic_nama',
+            'pic_telp': 'stage_akses_pic_telp',
+            'has_akses_gedung': 'stage_gedung_akses',
+            'gedung_nama': 'stage_gedung_nama',
+            'gedung_pic_nama': 'stage_gedung_pic_nama',
+            'gedung_pic_telp': 'stage_gedung_pic_telp',
+            'tgl_rencana_impl': 'stage_impl_rencana_tgl',
+            'tgl_aktual_mulai': 'stage_impl_aktual_tgl',
+            'ci_tim': 'stage_impl_check_in',
+            'co_tim': 'stage_impl_check_out',
+            'konfirmasi_rfi': 'stage_rfi_confirm',
+            'konfirmasi_rfs': 'stage_rfs_confirm',
+            'rfs_catatan': 'stage_rfs_catatan',
+            'konfirmasi_dok': 'stage_bast_dok_confirm',
+            'konfirmasi_final': 'stage_bast_final_confirm',
+            'final_notes': 'stage_catatan_final',
+            // Pass through fields
+            'team_id': 'team_id',
+            'field_leader_id': 'field_leader_id'
+        };
+
+        Object.entries(uiData).forEach(([key, value]) => {
+            const apiKey = mapping[key] || key;
+
+            // Optional transformations
+            let transformedValue = value;
+            if (key === 'survey_result') {
+                transformedValue = value === 'ok' ? 'LAYAK' : value === 'nok' ? 'TIDAK_LAYAK' : value;
+            }
+
+            apiData[apiKey] = transformedValue;
+        });
+
+        return apiData;
+    };
+
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
 
-        const changedBy = authStore.user()?.name || 'System';
-
         if (showIssueForm()) {
             if (!isIssueValid()) return;
-            // For now issue still uses callback, but could be integrated to API too
             props.onUpdateStage('issue_hold', issueNotes(), { issueAction: issueAction() });
         } else {
             if (!isMainFormValid()) return;
@@ -426,8 +485,14 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                 setIsSubmitting(true);
                 const nextStage = nextLogicalStageId()!;
 
-                // DUMMY MODE - Simulated API delay for local testing
-                await new Promise(resolve => setTimeout(resolve, 800));
+                const repo = new SiteRepositoryImpl();
+                const interactor = new UpdateSiteStageInteractor(repo);
+
+                const mappedData = mapUiToApiFields(nextStage, notes(), formData());
+
+                console.log('Sending stage update payload:', mappedData);
+
+                const response = await interactor.execute(props.siteId, mappedData);
 
                 props.onUpdateStage(nextStage, notes(), formData());
                 props.onClose();
@@ -439,6 +504,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
             }
         }
     };
+
 
     // Render Field Helpers
     const renderField = (field: string) => {
@@ -460,10 +526,10 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 }}
                             >
                                 <option value="">Pilih tim lapangan...</option>
-                                <For each={teams().filter((t: any) => t.status_aktif)}>
+                                <For each={teams().filter((t: any) => t.active !== false)}>
                                     {(t: any) => (
                                         <option value={t.id}>
-                                            {t.nama} ({t.project_type})
+                                            {t.nama} {t.regional ? `(${t.regional})` : ''}
                                         </option>
                                     )}
                                 </For>
@@ -519,14 +585,14 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                         </Show>
                     </div>
                 </Match>
-                <Match when={['survey_date', 'erfin_date', 'erfin_ready_date', 'permit_date', 'permit_start_date', 'permit_expiry_date', 'tgl_rencana_impl', 'tgl_aktual_mulai', 'tgl_bast', 'tgl_invoice'].includes(field)}>
+                <Match when={['survey_date', 'erfin_date', 'erfin_ready_date', 'permit_create_date', 'permit_start_date', 'permit_expiry_date', 'tgl_rencana_impl', 'tgl_aktual_mulai', 'tgl_bast', 'tgl_invoice'].includes(field)}>
                     <div class="space-y-1">
                         <label class="block text-sm font-medium text-slate-700">
                             {
                                 field === 'survey_date' ? 'Tanggal Survey' :
                                     field === 'erfin_date' ? 'Tanggal ERFIN' :
                                         field === 'erfin_ready_date' ? 'Tanggal ERFIN Ready' :
-                                            field === 'permit_date' ? 'Tanggal Buat Permit' :
+                                            field === 'permit_create_date' ? 'Tanggal Buat Permit' :
                                                 field === 'permit_start_date' ? 'Tanggal Berlaku Permit TPAS' :
                                                     field === 'permit_expiry_date' ? 'Tanggal Berakhir Permit TPAS' :
                                                         field === 'tgl_rencana_impl' ? 'Tanggal Rencana Implementasi' :
