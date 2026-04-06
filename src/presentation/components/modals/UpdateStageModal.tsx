@@ -195,18 +195,10 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
 };
 
 const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
-    console.log('=== MODAL PROPS DEBUG ===');
-    console.log('Current Stage:', props.currentStage);
-    console.log('Project Type:', props.projectType);
-    console.log('Site ID:', props.siteId);
-    console.log('Site Name:', props.siteName);
 
     const [selectedBranch, setSelectedBranch] = createSignal<string>('');
 
     const getNextStages = () => {
-        console.log('=== GET NEXT STAGES DEBUG ===');
-        console.log('Current Stage:', props.currentStage);
-        console.log('Project Type:', props.projectType);
 
         if (props.currentStage === 'survey') return ['erfin_process', 'survey_nok'];
 
