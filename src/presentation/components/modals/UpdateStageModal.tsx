@@ -8,6 +8,7 @@ import { UpdateSiteStageInteractor } from '../../../application/use-cases/update
 import { authStore } from '../../store/auth.store';
 import type { Team } from '../../../domain/entities/team.entity';
 import type { UpdateSiteStageRequest } from '../../../domain/entities/work-order.entity';
+import { mockTeams, mockPeople, mockTeamMembers } from '../../pages/dashboard/data/mockTeams';
 
 // Helper for classes
 const clsx = (...classes: any[]) => classes.flat().filter(Boolean).join(' ');
@@ -37,7 +38,8 @@ interface UpdateStageModalProps {
     onClose: () => void;
     siteId: string;
     siteName?: string;
-    currentStage: SiteStage;
+    projectType?: string;
+    currentStage: string;
     onUpdateStage: (newStage: string, notes?: string, payload?: Record<string, any>) => void;
 }
 
@@ -54,7 +56,11 @@ const STAGE_LABELS: Record<string, string> = {
     'dokumen_done': 'Dokumen Submitted',
     'bast': 'BAST',
     'invoice': 'Invoice',
-    'completed': 'Selesai'
+    'completed': 'Selesai',
+    'survey': 'Survey',
+    'survey_nok': 'Survey NOK',
+    'erfin_process': 'ERFIN Diproses',
+    'erfin_ready': 'ERFIN Ready'
 };
 
 interface TransitionConfig {
@@ -77,8 +83,36 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
     'assigned→permit_process': {
         nextLabel: 'Permit Diproses',
         helper: 'Catat tanggal pengajuan permit ke TPAS.',
-        fields: ['permit_date'],
-        requiredFields: ['permit_date'],
+        fields: ['permit_create_date'],
+        requiredFields: ['permit_create_date'],
+        paymentNote: null
+    },
+    'assigned→survey': {
+        nextLabel: 'Survey',
+        helper: 'Catat tanggal survei hasil lapangan.',
+        fields: ['survey_date'],
+        requiredFields: ['survey_date'],
+        paymentNote: null
+    },
+    'survey→erfin_process': {
+        nextLabel: 'Input Hasil Survey',
+        helper: 'Tentukan hasil survey. Jika OK lanjut ke ERFIN, jika NOK proses berhenti sementara.',
+        fields: ['survey_result_radio'],
+        requiredFields: ['survey_result'],
+        paymentNote: null
+    },
+    'erfin_process→erfin_ready': {
+        nextLabel: 'ERFIN Ready',
+        helper: 'Input data ERFIN yang sudah disetujui.',
+        fields: ['erfin_number', 'erfin_date', 'erfin_ready_date'],
+        requiredFields: ['erfin_number', 'erfin_date'],
+        paymentNote: null
+    },
+    'erfin_ready→permit_process': {
+        nextLabel: 'Permit Diproses',
+        helper: 'Catat tanggal pengajuan permit ke TPAS.',
+        fields: ['permit_create_date'],
+        requiredFields: ['permit_create_date'],
         paymentNote: null
     },
     'permit_process→permit_ready': {
@@ -161,14 +195,59 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
 };
 
 const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
+
+    const [selectedBranch, setSelectedBranch] = createSignal<string>('');
+
+    const getNextStages = () => {
+
+        if (props.currentStage === 'survey') return ['erfin_process', 'survey_nok'];
+
+        // As per user request, standard flow also goes to Survey -> ERFIN now
+        const ppl = props.projectType === 'RESCOPING'
+            ? ['imported', 'assigned', 'survey', 'erfin_process', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfi_done', 'dokumen_done', 'bast', 'invoice', 'completed']
+            : ['imported', 'assigned', 'survey', 'erfin_process', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfs_done', 'dokumen_done', 'bast', 'invoice', 'completed'];
+
+        console.log('Pipeline:', ppl);
+
+        const currentIndex = ppl.indexOf(props.currentStage);
+        console.log('Current Index:', currentIndex);
+
+        if (currentIndex === -1 || currentIndex === ppl.length - 1) {
+            console.log('No next stages available');
+            return [];
+        }
+
+        const nextStages = [ppl[currentIndex + 1]];
+        console.log('Next Stages:', nextStages);
+        return nextStages;
+    };
+
     const nextLogicalStageId = createMemo(() => {
-        const currentIndex = STAGE_ORDER.indexOf(props.currentStage as any);
-        if (currentIndex === -1 || currentIndex === STAGE_ORDER.length - 1) return null;
-        return STAGE_ORDER[currentIndex + 1];
+        const nextStages = getNextStages();
+        return (props.currentStage === 'survey' && selectedBranch() === 'survey_nok') ? 'survey_nok' : (nextStages[0] || null);
     });
 
-    const transitionKey = createMemo(() => `${props.currentStage}→${nextLogicalStageId()}`);
-    const config = createMemo(() => STAGE_TRANSITION_CONFIG[transitionKey()]);
+    const transitionKey = createMemo(() => {
+        const nextStage = nextLogicalStageId();
+        const key = `${props.currentStage}→${nextStage}`;
+        console.log('=== TRANSITION DEBUG ===');
+        console.log('Current Stage:', props.currentStage);
+        console.log('Next Stage:', nextStage);
+        console.log('Transition Key:', key);
+        console.log('Config Found:', !!STAGE_TRANSITION_CONFIG[key]);
+        return key;
+    });
+
+    const config = createMemo(() => {
+        const key = transitionKey();
+        const configFound = STAGE_TRANSITION_CONFIG[key];
+        console.log('=== CONFIG DEBUG ===');
+        console.log('Transition Key:', key);
+        console.log('Config Found:', !!configFound);
+        console.log('Config:', configFound);
+        console.log('Available Configs:', Object.keys(STAGE_TRANSITION_CONFIG));
+        return configFound;
+    });
 
     // Form State
     const [notes, setNotes] = createSignal('');
@@ -178,7 +257,10 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     // Dynamic Fields State
     const [formData, setFormData] = createSignal<Record<string, any>>({
-        permit_date: new Date().toISOString().split('T')[0] // default today
+        survey_date: new Date().toISOString().split('T')[0], // default today for survey
+        permit_create_date: new Date().toISOString().split('T')[0], // default today for permit creation
+        permit_start_date: new Date().toISOString().split('T')[0], // default today for other permit fields
+        permit_expiry_date: new Date().toISOString().split('T')[0]
     });
 
     // Files State
@@ -193,8 +275,8 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
     onMount(async () => {
         try {
             const teamRepo = new TeamRepositoryImpl();
-            const teamsData = await teamRepo.findAll();
-            setTeams(teamsData);
+            const apiTeams = await teamRepo.findAll();
+            setTeams(apiTeams);
         } catch (err) {
             console.error('Failed to fetch teams:', err);
             setFetchError('Gagal mengambil data tim');
@@ -209,13 +291,24 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
             setIssueNotes('');
             setFiles([]);
             setFormData({
-                permit_date: new Date().toISOString().split('T')[0]
+                permit_create_date: new Date().toISOString().split('T')[0]
             });
         }
     });
 
     const handleFormChange = (key: string, value: any) => {
+        console.log('=== FORM CHANGE DEBUG ===');
+        console.log('Key:', key);
+        console.log('Value:', value);
+        console.log('Previous formData:', formData());
+
         setFormData(prev => ({ ...prev, [key]: value }));
+
+        console.log('New formData will be:', { ...formData(), [key]: value });
+
+        if (key === 'survey_result') {
+            setSelectedBranch(value === 'nok' ? 'survey_nok' : 'erfin_process');
+        }
     };
 
     const handleDragOver = (e: DragEvent) => {
@@ -254,64 +347,156 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     const isMainFormValid = createMemo(() => {
         const c = config();
-        if (!c) return false;
-        if (hasOversizedFiles()) return false;
+        if (!c) {
+            console.log('❌ Validation: No config found');
+            return false;
+        }
+        if (hasOversizedFiles()) {
+            console.log('❌ Validation: Oversized files');
+            return false;
+        }
 
         const data = formData();
-        for (const req of c.requiredFields) {
-            if (req === 'files') {
-                if (files().length === 0) return false;
-            } else if (req === 'tpas_approved' || req === 'tp_approved' || req.startsWith('konfirmasi_')) {
-                if (!data[req]) return false;
-            } else {
-                if (!data[req] || data[req] === '') return false;
+        console.log('=== VALIDATION DEBUG ===');
+        console.log('Form Data:', data);
+        console.log('Required Fields:', c.requiredFields);
+
+        if (props.currentStage === 'survey') {
+            if (!data['survey_result']) {
+                console.log('❌ Validation: Missing survey_result');
+                return false;
+            }
+            if (data['survey_result'] === 'nok' && (!data['survey_nok_reason'] || data['survey_nok_reason'].trim() === '')) {
+                console.log('❌ Validation: Missing survey_nok_reason');
+                return false;
             }
         }
+
+        if (data['has_akses_gedung'] === true && (!data['gedung_nama'] || data['gedung_nama'] === '')) {
+            console.log('❌ Validation: Missing gedung_nama');
+            return false;
+        }
+
+        for (const req of c.requiredFields) {
+            if (req === 'files' && data['survey_result'] === 'nok') continue;
+
+            if (req === 'files') {
+                if (files().length === 0) {
+                    console.log('❌ Validation: Missing files');
+                    return false;
+                }
+            } else if (req === 'tpas_approved' || req === 'tp_approved' || req.startsWith('konfirmasi_')) {
+                if (!data[req]) {
+                    console.log(`❌ Validation: Missing ${req}`);
+                    return false;
+                }
+            } else {
+                if (!data[req] || data[req] === '') {
+                    console.log(`❌ Validation: Missing ${req}`, data[req]);
+                    return false;
+                }
+            }
+        }
+
+        console.log('✅ Validation: All checks passed');
         return true;
     });
 
     const isIssueValid = createMemo(() => issueNotes().trim().length > 0);
 
+    const mapUiToApiFields = (nextStage: string, notes: string, uiData: Record<string, any>): UpdateSiteStageRequest => {
+        // Use 'nama' field from user if available (API teams format), fallback to 'name' or 'System'
+        const changedBy = (authStore.user() as any)?.nama || authStore.user()?.name || 'System';
+        const apiData: UpdateSiteStageRequest = {
+            stage: nextStage,
+            notes: notes,
+            changed_by: changedBy,
+            files: files()
+        };
+
+        // Mapping table
+        const mapping: Record<string, string> = {
+            'permit_create_date': 'stage_permit_date',
+            'tpas_approved': 'stage_tpas_approved',
+            'tp_approved': 'stage_tp_approved',
+            'caf_approved': 'stage_caf_approved',
+            'permit_start_date': 'stage_permit_berlaku',
+            'permit_expiry_date': 'stage_permit_berakhir',
+            'survey_result': 'stage_survey_result',
+            'survey_nok_reason': 'stage_survey_nok_reason',
+            'erfin_number': 'stage_erfin_number',
+            'erfin_date': 'stage_erfin_date',
+            'tower_provider': 'stage_akses_provider',
+            'jenis_kunci': 'stage_akses_kunci',
+            'pic_nama': 'stage_akses_pic_nama',
+            'pic_telp': 'stage_akses_pic_telp',
+            'has_akses_gedung': 'stage_gedung_akses',
+            'gedung_nama': 'stage_gedung_nama',
+            'gedung_pic_nama': 'stage_gedung_pic_nama',
+            'gedung_pic_telp': 'stage_gedung_pic_telp',
+            'tgl_rencana_impl': 'stage_impl_rencana_tgl',
+            'tgl_aktual_mulai': 'stage_impl_aktual_tgl',
+            'ci_tim': 'stage_impl_check_in',
+            'co_tim': 'stage_impl_check_out',
+            'konfirmasi_rfi': 'stage_rfi_confirm',
+            'konfirmasi_rfs': 'stage_rfs_confirm',
+            'rfs_catatan': 'stage_rfs_catatan',
+            'konfirmasi_dok': 'stage_bast_dok_confirm',
+            'konfirmasi_final': 'stage_bast_final_confirm',
+            'final_notes': 'stage_catatan_final',
+            // Pass through fields
+            'team_id': 'team_id',
+            'field_leader_id': 'field_leader_id'
+        };
+
+        Object.entries(uiData).forEach(([key, value]) => {
+            const apiKey = mapping[key] || key;
+
+            // Optional transformations
+            let transformedValue = value;
+            if (key === 'survey_result') {
+                transformedValue = value === 'ok' ? 'LAYAK' : value === 'nok' ? 'TIDAK_LAYAK' : value;
+            }
+
+            apiData[apiKey] = transformedValue;
+        });
+
+        return apiData;
+    };
+
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
-        
-        const changedBy = authStore.user()?.name || 'System';
-        
+
         if (showIssueForm()) {
             if (!isIssueValid()) return;
-            // For now issue still uses callback, but could be integrated to API too
             props.onUpdateStage('issue_hold', issueNotes(), { issueAction: issueAction() });
         } else {
             if (!isMainFormValid()) return;
-            
+
             try {
                 setIsSubmitting(true);
                 const nextStage = nextLogicalStageId()!;
-                
-                const request: UpdateSiteStageRequest = {
-                    stage: nextStage,
-                    notes: notes(),
-                    changed_by: changedBy,
-                    ...formData()
-                };
 
-                const siteRepo = new SiteRepositoryImpl();
-                const updateStageUseCase = new UpdateSiteStageInteractor(siteRepo);
-                
-                await updateStageUseCase.execute(props.siteId, request);
-                
+                const repo = new SiteRepositoryImpl();
+                const interactor = new UpdateSiteStageInteractor(repo);
+
+                const mappedData = mapUiToApiFields(nextStage, notes(), formData());
+
+                console.log('Sending stage update payload:', mappedData);
+
+                const response = await interactor.execute(props.siteId, mappedData);
+
                 props.onUpdateStage(nextStage, notes(), formData());
                 props.onClose();
             } catch (err: any) {
                 console.error('Failed to update stage:', err);
-                // We'll use the issue format/style for error feedback if needed, 
-                // or just alert for now since we don't have a dedicated error area besides the modal
                 alert(err.message || 'Gagal mengupdate stage. Silakan coba lagi.');
             } finally {
                 setIsSubmitting(false);
             }
         }
     };
+
 
     // Render Field Helpers
     const renderField = (field: string) => {
@@ -320,32 +505,92 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
         return (
             <Switch>
                 <Match when={field === 'team_select'}>
-                    <div class="space-y-1">
-                        <label class="block text-sm font-medium text-slate-700">Tim <span class="text-red-500">*</span></label>
-                        <select
-                            required
-                            class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm"
-                            value={(data.team_id as string) || ''}
-                            onChange={(e) => handleFormChange('team_id', e.currentTarget.value)}
-                        >
-                            <option value="">Pilih tim lapangan...</option>
-                            <For each={teams()}>
-                                {(t) => <option value={t.id}>{t.nama}</option>}
-                            </For>
-                        </select>
+                    <div class="space-y-4 border p-4 rounded-lg bg-slate-50/50">
+                        <div class="space-y-1">
+                            <label class="block text-sm font-medium text-slate-700">Tim Lapangan <span class="text-red-500">*</span></label>
+                            <select
+                                required
+                                class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                                value={(formData().team_id as string) || ''}
+                                onChange={(e) => {
+                                    handleFormChange('team_id', e.currentTarget.value);
+                                    handleFormChange('field_leader_id', ''); // Reset field leader when team changes
+                                }}
+                            >
+                                <option value="">Pilih tim lapangan...</option>
+                                <For each={teams().filter((t: any) => t.active !== false)}>
+                                    {(t: any) => (
+                                        <option value={t.id}>
+                                            {t.nama} {t.regional ? `(${t.regional})` : ''}
+                                        </option>
+                                    )}
+                                </For>
+                            </select>
+                        </div>
+
+                        <Show when={formData().team_id}>
+                            <div class="pl-4 border-l-2 border-blue-200 space-y-3 pt-1">
+                                <div class="space-y-1.5 pt-1">
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                        Field Leader <span class="text-red-500">*</span>
+                                    </label>
+                                    <Show
+                                        when={mockTeamMembers.filter(tm =>
+                                            tm.team_id === formData().team_id && tm.role === 'Team Leader'
+                                        ).length > 0}
+                                        fallback={
+                                            <div class="space-y-2">
+                                                <select
+                                                    disabled
+                                                    class="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
+                                                >
+                                                    <option>— Belum ada field leader di tim ini</option>
+                                                </select>
+                                                <div class="flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                                                    <AlertTriangleIcon class="w-4 h-4 shrink-0" />
+                                                    <p>Tim ini belum memiliki field leader. Tambahkan terlebih dahulu di halaman Teams.</p>
+                                                </div>
+                                            </div>
+                                        }
+                                    >
+                                        <select
+                                            required
+                                            class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                                            value={(formData().field_leader_id as string) || ''}
+                                            onChange={(e) => handleFormChange('field_leader_id', e.currentTarget.value)}
+                                        >
+                                            <option value="">Pilih field leader...</option>
+                                            <For each={mockTeamMembers.filter(tm =>
+                                                tm.team_id === formData().team_id && tm.role === 'Team Leader'
+                                            )}>
+                                                {(tm) => {
+                                                    const person = mockPeople.find(p => p.id === tm.person_id);
+                                                    return person ? (
+                                                        <option value={person.id}>{person.name}</option>
+                                                    ) : null;
+                                                }}
+                                            </For>
+                                        </select>
+                                    </Show>
+                                </div>
+                            </div>
+                        </Show>
                     </div>
                 </Match>
-                <Match when={['permit_date', 'permit_start_date', 'permit_expiry_date', 'tgl_rencana_impl', 'tgl_aktual_mulai', 'tgl_bast', 'tgl_invoice'].includes(field)}>
+                <Match when={['survey_date', 'erfin_date', 'erfin_ready_date', 'permit_create_date', 'permit_start_date', 'permit_expiry_date', 'tgl_rencana_impl', 'tgl_aktual_mulai', 'tgl_bast', 'tgl_invoice'].includes(field)}>
                     <div class="space-y-1">
                         <label class="block text-sm font-medium text-slate-700">
                             {
-                                field === 'permit_date' ? 'Tanggal Buat Permit' :
-                                    field === 'permit_start_date' ? 'Tanggal Berlaku Permit TPAS' :
-                                        field === 'permit_expiry_date' ? 'Tanggal Berakhir Permit TPAS' :
-                                            field === 'tgl_rencana_impl' ? 'Tanggal Rencana Implementasi' :
-                                                field === 'tgl_aktual_mulai' ? 'Tanggal Aktual Mulai' :
-                                                    field === 'tgl_bast' ? 'Tanggal BAST' :
-                                                        field === 'tgl_invoice' ? 'Tanggal Invoice' : ''
+                                field === 'survey_date' ? 'Tanggal Survey' :
+                                    field === 'erfin_date' ? 'Tanggal ERFIN' :
+                                        field === 'erfin_ready_date' ? 'Tanggal ERFIN Ready' :
+                                            field === 'permit_create_date' ? 'Tanggal Buat Permit' :
+                                                field === 'permit_start_date' ? 'Tanggal Berlaku Permit TPAS' :
+                                                    field === 'permit_expiry_date' ? 'Tanggal Berakhir Permit TPAS' :
+                                                        field === 'tgl_rencana_impl' ? 'Tanggal Rencana Implementasi' :
+                                                            field === 'tgl_aktual_mulai' ? 'Tanggal Aktual Mulai' :
+                                                                field === 'tgl_bast' ? 'Tanggal BAST' :
+                                                                    field === 'tgl_invoice' ? 'Tanggal Invoice' : ''
                             } {config()?.requiredFields.includes(field) && <span class="text-red-500">*</span>}
                         </label>
                         <input
@@ -430,21 +675,23 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                         </div>
                     </div>
                 </Match>
-                <Match when={['pic_nama', 'pic_telp', 'no_invoice'].includes(field)}>
+                <Match when={['erfin_number', 'pic_nama', 'pic_telp', 'no_invoice'].includes(field)}>
                     <div class="space-y-1">
                         <label class="block text-sm font-medium text-slate-700">
                             {
-                                field === 'pic_nama' ? 'PIC Akses — Nama' :
-                                    field === 'pic_telp' ? 'PIC Akses — No. Telp' :
-                                        field === 'no_invoice' ? 'Nomor Invoice' : ''
+                                field === 'erfin_number' ? 'Nomor ERFIN' :
+                                    field === 'pic_nama' ? 'PIC Akses — Nama' :
+                                        field === 'pic_telp' ? 'PIC Akses — No. Telp' :
+                                            field === 'no_invoice' ? 'Nomor Invoice' : ''
                             } {config()?.requiredFields.includes(field) && <span class="text-red-500">*</span>}
                         </label>
                         <input
                             type={field === 'pic_telp' ? 'tel' : 'text'}
                             placeholder={
-                                field === 'pic_nama' ? 'Nama PIC dari Tower Provider' :
-                                    field === 'pic_telp' ? '08xx xxxx xxxx' :
-                                        field === 'no_invoice' ? 'INV-XXX' : ''
+                                field === 'erfin_number' ? 'ERF-XXX' :
+                                    field === 'pic_nama' ? 'Nama PIC dari Tower Provider' :
+                                        field === 'pic_telp' ? '08xx xxxx xxxx' :
+                                            field === 'no_invoice' ? 'INV-XXX' : ''
                             }
                             required={config()?.requiredFields.includes(field)}
                             value={(data[field] as string) || ''}
@@ -473,6 +720,71 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 } <span class="text-red-500">*</span>
                             </span>
                         </label>
+                    </div>
+                </Match>
+                <Match when={field === 'survey_result_radio'}>
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-slate-800">Hasil Survey <span class="text-red-500">*</span></label>
+                            <div class="flex flex-col gap-3 p-3 bg-slate-50 border border-slate-200 rounded">
+                                <label class="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-slate-200 transition-colors">
+                                    <input
+                                        type="radio"
+                                        name="survey_result"
+                                        value="ok"
+                                        checked={data.survey_result === 'ok'}
+                                        onChange={(e) => handleFormChange('survey_result', e.currentTarget.value)}
+                                        class="mt-0.5 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                    />
+                                    <div>
+                                        <span class="block text-sm font-bold text-slate-800">OK</span>
+                                        <span class="block text-xs text-slate-500">Site layak, lanjut ke ERFIN</span>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-slate-200 transition-colors">
+                                    <input
+                                        type="radio"
+                                        name="survey_result"
+                                        value="nok"
+                                        checked={data.survey_result === 'nok'}
+                                        onChange={(e) => handleFormChange('survey_result', e.currentTarget.value)}
+                                        class="mt-0.5 text-red-600 focus:ring-red-500 w-4 h-4"
+                                    />
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="block text-sm font-bold text-red-700">NOK</span>
+                                            <Show when={data.survey_result === 'nok'}>
+                                                <span class="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Hentikan Sementara</span>
+                                            </Show>
+                                        </div>
+                                        <span class="block text-xs text-slate-500">Site tidak layak sementara</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <Show when={data.survey_result === 'nok'}>
+                            <div class="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                                <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 p-3 rounded">
+                                    <AlertTriangleIcon class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                    <p class="text-xs font-medium text-amber-800 leading-relaxed">
+                                        ⚠ Site akan ditandai Survey NOK. <br />
+                                        Proses akan berhenti di sini sampai direset oleh Operational/Admin.
+                                    </p>
+                                </div>
+                                <div class="pt-2">
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1">Alasan NOK <span class="text-red-500">*</span></label>
+                                    <textarea
+                                        required
+                                        rows={3}
+                                        value={(data.survey_nok_reason as string) || ''}
+                                        onChange={(e) => handleFormChange('survey_nok_reason', e.currentTarget.value)}
+                                        class="w-full px-3 py-2 border border-red-300 rounded focus:border-red-500 text-sm bg-white"
+                                        placeholder="Jelaskan alasan site tidak layak..."
+                                    />
+                                </div>
+                            </div>
+                        </Show>
                     </div>
                 </Match>
                 <Match when={field === 'file_upload'}>
@@ -586,7 +898,9 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 <div class="flex-1">
                                     <span class="block text-xs font-medium text-blue-500 mb-0.5">Move to</span>
                                     <Show when={config()} fallback={<span class="font-bold text-slate-400">Tidak ada next stage</span>}>
-                                        <span class="font-bold text-blue-700">{config()?.nextLabel}</span>
+                                        <span class="font-bold text-blue-700">
+                                            {props.currentStage === 'survey' ? (selectedBranch() === 'survey_nok' ? 'Survey NOK' : 'ERFIN Diproses') : config()?.nextLabel}
+                                        </span>
                                     </Show>
                                 </div>
                             </div>
@@ -710,7 +1024,12 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 disabled={!config() || !isMainFormValid()}
                                 class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded transition-colors text-sm shadow-sm flex items-center gap-2"
                             >
-                                Update Stage {isSubmitting() ? '...' : <ChevronRightIcon class="w-4 h-4" />}
+                                {isSubmitting() ? 'Updating...' : (props.currentStage === 'survey' && selectedBranch() === 'survey_nok' ? 'Tandai NOK' : 'Update Stage')}
+                                {isSubmitting() ? (
+                                    <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                ) : (
+                                    <ChevronRightIcon class="w-4 h-4" />
+                                )}
                             </button>
                         }>
                             <button

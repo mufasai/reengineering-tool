@@ -39,9 +39,42 @@ export const apiClient = {
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
-        // Don't set Content-Type for FormData - browser will set it with boundary
         const response = await fetch(`${BASE_URL}${path}`, {
             method: 'POST',
+            headers,
+            body: formData,
+        });
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || `API Error: ${response.statusText}`);
+        }
+        return response.json();
+    },
+    patchFormData: async <T>(path: string, formData: FormData): Promise<T> => {
+        const token = localStorage.getItem('auth_token');
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch(`${BASE_URL}${path}`, {
+            method: 'PATCH',
+            headers,
+            body: formData,
+        });
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.message || `API Error: ${response.statusText}`);
+        }
+        return response.json();
+    },
+    putFormData: async <T>(path: string, formData: FormData): Promise<T> => {
+        const token = localStorage.getItem('auth_token');
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch(`${BASE_URL}${path}`, {
+            method: 'PUT',
             headers,
             body: formData,
         });

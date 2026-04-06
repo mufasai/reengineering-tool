@@ -1,4 +1,4 @@
-export type ProjectType = 'COMBAT' | 'L2H' | 'BLACKSITE' | 'REFINEN' | 'FILTER' | 'BEBAN_OPERASIONAL';
+export type ProjectType = 'COMBAT' | 'L2H' | 'BLACKSITE' | 'REFINEN' | 'FILTER' | 'BEBAN_OPERASIONAL' | 'RESCOPING';
 export type SiteStage = 'imported' | 'assigned' | 'permit_process' | 'permit_ready' | 'akses_process' | 'akses_ready' | 'implementasi' | 'rfi_done' | 'rfs_done' | 'dokumen_done' | 'bast' | 'invoice' | 'completed' | 'issue_hold';
 
 export const STAGE_ORDER: SiteStage[] = [
