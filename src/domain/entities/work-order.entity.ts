@@ -29,6 +29,7 @@ export interface Site {
     impl_dokumen_done: boolean;
     ineom_registered: boolean;
     team?: Personnel[]; // Using Personnel from team.entity.ts
+    project_type?: string;
     created_at?: string;
     updated_at?: string;
 }
