@@ -338,7 +338,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
             return [
                 { id: 'assigned', name: 'Assigned', description: 'Assign tim lapangan' },
                 { id: 'survey', name: 'Survey', description: 'Site survey' },
-                { id: 'erfin_process', name: 'ERFIN Process', description: 'ERFIN processing' },
+                { id: 'erfin_diproses', name: 'ERFIN Diproses', description: 'ERFIN processing' },
                 { id: 'erfin_ready', name: 'ERFIN Ready', description: 'ERFIN completed' },
                 { id: 'permit_process', name: 'Permit Process', description: 'Permit processing' },
                 { id: 'permit_ready', name: 'Permit Ready', description: 'Permit obtained' },

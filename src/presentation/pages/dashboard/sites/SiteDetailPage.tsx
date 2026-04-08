@@ -90,7 +90,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
     const STAGE_GROUPS = [
         { label: 'Assigned', keys: ['assigned'] },
         { label: 'Survey', keys: ['survey', 'survey_nok'] },
-        { label: 'ERFIN', keys: ['erfin_process', 'erfin_ready'] },
+        { label: 'ERFIN', keys: ['erfin_diproses', 'erfin_ready'] },
         { label: 'Permit', keys: ['permit_process', 'permit_ready'] },
         { label: 'Akses', keys: ['akses_process', 'akses_ready'] },
         { label: 'Implementasi', keys: ['implementasi', 'rfi_done', 'rfs_done', 'dokumen_done'] },
@@ -490,7 +490,10 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                         <div class="bg-white p-8 rounded-xl border border-slate-200 shadow-sm relative">
                             <div class="flex items-center justify-between mb-6 border-b border-slate-50 pb-4 gap-2">
                                 <h3 class="text-sm font-semibold text-blue-500 break-words">Team: {(site() as any)?.team_assigned || 'Unassigned'}</h3>
-                                <button class="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0">
+                                <button 
+                                    onClick={() => setIsUpdateModalOpen(true)}
+                                    class="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0"
+                                >
                                     <Edit class="w-3.5 h-3.5" />
                                     Edit
                                 </button>
