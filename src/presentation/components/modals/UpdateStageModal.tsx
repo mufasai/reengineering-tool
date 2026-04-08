@@ -202,10 +202,9 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
         if (props.currentStage === 'survey') return ['erfin_process', 'survey_nok'];
 
-        // As per user request, standard flow also goes to Survey -> ERFIN now
         const ppl = props.projectType === 'RESCOPING'
             ? ['imported', 'assigned', 'survey', 'erfin_process', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfi_done', 'dokumen_done', 'bast', 'invoice', 'completed']
-            : ['imported', 'assigned', 'survey', 'erfin_process', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfs_done', 'dokumen_done', 'bast', 'invoice', 'completed'];
+            : ['imported', 'assigned', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfs_done', 'dokumen_done', 'bast', 'invoice', 'completed'];
 
         console.log('Pipeline:', ppl);
 
@@ -416,12 +415,13 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
         // Mapping table
         const mapping: Record<string, string> = {
-            'permit_create_date': 'stage_permit_date',
+            'permit_create_date': 'permit_date',
             'tpas_approved': 'stage_tpas_approved',
             'tp_approved': 'stage_tp_approved',
             'caf_approved': 'stage_caf_approved',
             'permit_start_date': 'stage_permit_berlaku',
             'permit_expiry_date': 'stage_permit_berakhir',
+            'survey_date': 'stage_survey_date',
             'survey_result': 'stage_survey_result',
             'survey_nok_reason': 'stage_survey_nok_reason',
             'erfin_number': 'stage_erfin_number',

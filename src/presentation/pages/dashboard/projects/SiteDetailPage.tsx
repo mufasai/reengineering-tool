@@ -332,7 +332,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
 
     // Get stage steps for progress stepper (excluding 'imported' since it's already done when viewing detail)
     const getStageSteps = () => {
-        const projectType = 'RESCOPING'; // You can get this from props or site data
+        const projectType = currentSite().project_type;
 
         if (projectType === 'RESCOPING') {
             return [
@@ -354,9 +354,6 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
         } else {
             return [
                 { id: 'assigned', name: 'Assigned', description: 'Assign tim lapangan' },
-                { id: 'survey', name: 'Survey', description: 'Site survey' },
-                { id: 'erfin_process', name: 'ERFIN Process', description: 'ERFIN processing' },
-                { id: 'erfin_ready', name: 'ERFIN Ready', description: 'ERFIN completed' },
                 { id: 'permit_process', name: 'Permit Process', description: 'Permit processing' },
                 { id: 'permit_ready', name: 'Permit Ready', description: 'Permit obtained' },
                 { id: 'akses_process', name: 'Akses Process', description: 'Access processing' },
@@ -1194,7 +1191,7 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                 onClose={() => setShowUpdateStageModal(false)}
                 siteId={currentSite().id}
                 siteName={currentSite().site_name}
-                projectType="RESCOPING" // You can make this dynamic based on project data
+                projectType={currentSite().project_type}
                 currentStage={dummyStage() === 'imported' ? 'imported' : dummyStage()}
                 onUpdateStage={handleUpdateStage}
             />
