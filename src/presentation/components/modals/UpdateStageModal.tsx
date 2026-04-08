@@ -59,7 +59,7 @@ const STAGE_LABELS: Record<string, string> = {
     'completed': 'Selesai',
     'survey': 'Survey',
     'survey_nok': 'Survey NOK',
-    'erfin_process': 'ERFIN Diproses',
+    'erfin_diproses': 'ERFIN Diproses',
     'erfin_ready': 'ERFIN Ready'
 };
 
@@ -94,14 +94,14 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
         requiredFields: ['survey_date'],
         paymentNote: null
     },
-    'survey→erfin_process': {
+    'survey→erfin_diproses': {
         nextLabel: 'Input Hasil Survey',
         helper: 'Tentukan hasil survey. Jika OK lanjut ke ERFIN, jika NOK proses berhenti sementara.',
         fields: ['survey_result_radio'],
         requiredFields: ['survey_result'],
         paymentNote: null
     },
-    'erfin_process→erfin_ready': {
+    'erfin_diproses→erfin_ready': {
         nextLabel: 'ERFIN Ready',
         helper: 'Input data ERFIN yang sudah disetujui.',
         fields: ['erfin_number', 'erfin_date', 'erfin_ready_date'],
@@ -133,7 +133,7 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
     'akses_process→akses_ready': {
         nextLabel: 'Akses Ready',
         helper: 'Konfirmasi akses ke tower sudah bisa dilakukan.',
-        fields: ['konfirmasi_akses', 'file_upload'],
+        fields: ['konfirmasi_akses', 'has_akses_gedung', 'file_upload'],
         requiredFields: ['konfirmasi_akses'],
         fileLabel: 'Foto kondisi site / bukti akses',
         paymentNote: null
@@ -148,7 +148,7 @@ const STAGE_TRANSITION_CONFIG: Record<string, TransitionConfig> = {
     'implementasi→rfi_done': {
         nextLabel: 'RFI Selesai',
         helper: 'Radio Frequency Inspection selesai dilakukan.',
-        fields: ['co_tim', 'konfirmasi_rfi', 'file_upload'],
+        fields: ['co_tim', 'konfirmasi_rfi', 'catatan_teknis', 'file_upload'],
         requiredFields: ['co_tim', 'konfirmasi_rfi'],
         fileLabel: 'Foto CI/CO, laporan RFI',
         paymentNote: '💰 Setelah stage ini: T2a (30% dari Termin 2) akan dapat diajukan.'
@@ -200,11 +200,9 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     const getNextStages = () => {
 
-        if (props.currentStage === 'survey') return ['erfin_process', 'survey_nok'];
+        if (props.currentStage === 'survey') return ['erfin_diproses', 'survey_nok'];
 
-        const ppl = props.projectType === 'RESCOPING'
-            ? ['imported', 'assigned', 'survey', 'erfin_process', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfi_done', 'dokumen_done', 'bast', 'invoice', 'completed']
-            : ['imported', 'assigned', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfs_done', 'dokumen_done', 'bast', 'invoice', 'completed'];
+        const ppl = ['imported', 'assigned', 'survey', 'erfin_diproses', 'erfin_ready', 'permit_process', 'permit_ready', 'akses_process', 'akses_ready', 'implementasi', 'rfi_done', 'rfs_done', 'dokumen_done', 'bast', 'invoice', 'completed'];
 
         console.log('Pipeline:', ppl);
 
@@ -285,7 +283,31 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
     // Reset form when modal opens with new site/stage
     createEffect(() => {
         if (props.isOpen) {
-            setNotes('');
+            // Check if this is the first transition from imported to assigned
+            if (props.currentStage === 'imported') {
+                setNotes('Update stage dari imported ke assigned');
+            } else if (props.currentStage === 'assigned') {
+                setNotes('Update ke SURVEY');
+            } else if (props.currentStage === 'survey') {
+                setNotes('Update ke ERFIN DIPROSES');
+            } else if (props.currentStage === 'erfin_diproses') {
+                setNotes('Update ke ERFIN READY');
+            } else if (props.currentStage === 'erfin_ready') {
+                setNotes('Update ke PERMIT PROCESS');
+            } else if (props.currentStage === 'permit_process') {
+                setNotes('Update ke PERMIT READY dengan kelengkapan dokumen');
+            } else if (props.currentStage === 'permit_ready') {
+                setNotes('Lanjut akses proses');
+            } else if (props.currentStage === 'akses_process') {
+                setNotes('Sudah akses gedung dan konfirmasi');
+            } else if (props.currentStage === 'akses_ready') {
+                setNotes('Tim sudah check-in di lokasi');
+            } else if (props.currentStage === 'implementasi') {
+                setNotes('Pekerjaan Install & Integrasi selesai');
+            } else {
+                setNotes('');
+            }
+            
             setShowIssueForm(false);
             setIssueNotes('');
             setFiles([]);
@@ -306,7 +328,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
         console.log('New formData will be:', { ...formData(), [key]: value });
 
         if (key === 'survey_result') {
-            setSelectedBranch(value === 'nok' ? 'survey_nok' : 'erfin_process');
+            setSelectedBranch(value === 'nok' ? 'survey_nok' : 'erfin_diproses');
         }
     };
 
@@ -404,8 +426,11 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
     const isIssueValid = createMemo(() => issueNotes().trim().length > 0);
 
     const mapUiToApiFields = (nextStage: string, notes: string, uiData: Record<string, any>): UpdateSiteStageRequest => {
-        // Use 'nama' field from user if available (API teams format), fallback to 'name' or 'System'
-        const changedBy = (authStore.user() as any)?.nama || authStore.user()?.name || 'System';
+        // Use 'System' for initial assignment, otherwise use logged in user's name
+        const changedBy = (nextStage === 'assigned' && props.currentStage === 'imported') 
+            ? 'System' 
+            : ((authStore.user() as any)?.nama || authStore.user()?.name || 'System');
+            
         const apiData: UpdateSiteStageRequest = {
             stage: nextStage,
             notes: notes,
@@ -416,31 +441,35 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
         // Mapping table
         const mapping: Record<string, string> = {
             'permit_create_date': 'permit_date',
-            'tpas_approved': 'stage_tpas_approved',
-            'tp_approved': 'stage_tp_approved',
-            'caf_approved': 'stage_caf_approved',
-            'permit_start_date': 'stage_permit_berlaku',
-            'permit_expiry_date': 'stage_permit_berakhir',
-            'survey_date': 'stage_survey_date',
-            'survey_result': 'stage_survey_result',
+            'permit_start_date': 'tgl_berlaku_permit_tpas',
+            'permit_expiry_date': 'tgl_berakhir_permit_tpas',
+            'survey_date': 'survey_date',
+            'survey_result': 'survey_result',
             'survey_nok_reason': 'stage_survey_nok_reason',
-            'erfin_number': 'stage_erfin_number',
-            'erfin_date': 'stage_erfin_date',
-            'tower_provider': 'stage_akses_provider',
-            'jenis_kunci': 'stage_akses_kunci',
-            'pic_nama': 'stage_akses_pic_nama',
-            'pic_telp': 'stage_akses_pic_telp',
-            'has_akses_gedung': 'stage_gedung_akses',
-            'gedung_nama': 'stage_gedung_nama',
-            'gedung_pic_nama': 'stage_gedung_pic_nama',
-            'gedung_pic_telp': 'stage_gedung_pic_telp',
-            'tgl_rencana_impl': 'stage_impl_rencana_tgl',
-            'tgl_aktual_mulai': 'stage_impl_aktual_tgl',
-            'ci_tim': 'stage_impl_check_in',
-            'co_tim': 'stage_impl_check_out',
-            'konfirmasi_rfi': 'stage_rfi_confirm',
+            'erfin_number': 'erfin_number',
+            'erfin_date': 'erfin_date',
+            'erfin_ready_date': 'erfin_ready_date',
+            'tpas_approved': 'tpas_approved',
+            'tp_approved': 'tp_approved',
+            'caf_approved': 'caf_approved',
+            'tower_provider': 'tower_provider',
+            'jenis_kunci': 'jenis_kunci',
+            'pic_nama': 'pic_akses_nama',
+            'pic_telp': 'pic_akses_telp',
+            'has_akses_gedung': 'has_akses_gedung',
+            'gedung_nama': 'gedung_nama',
+            'gedung_pic_nama': 'gedung_pic_nama',
+            'gedung_pic_telp': 'gedung_pic_telp',
+            'gedung_akses_status': 'gedung_akses_status',
+            'konfirmasi_akses': 'konfirmasi_akses',
+            'tgl_rencana_impl': 'tgl_rencana_implementasi',
+            'tgl_aktual_mulai': 'tgl_aktual_mulai',
+            'ci_tim': 'jam_checkin',
+            'co_tim': 'jam_checkout',
+            'konfirmasi_rfi': 'konfirmasi_rfi',
             'konfirmasi_rfs': 'stage_rfs_confirm',
             'rfs_catatan': 'stage_rfs_catatan',
+            'catatan_teknis': 'catatan_teknis',
             'konfirmasi_dok': 'stage_bast_dok_confirm',
             'konfirmasi_final': 'stage_bast_final_confirm',
             'final_notes': 'stage_catatan_final',
@@ -455,7 +484,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
             // Optional transformations
             let transformedValue = value;
             if (key === 'survey_result') {
-                transformedValue = value === 'ok' ? 'LAYAK' : value === 'nok' ? 'TIDAK_LAYAK' : value;
+                transformedValue = value === 'ok' ? 'OK' : value === 'nok' ? 'NOK' : value;
             }
 
             apiData[apiKey] = transformedValue;
@@ -500,7 +529,6 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
 
     // Render Field Helpers
     const renderField = (field: string) => {
-        const data = formData();
 
         return (
             <Switch>
@@ -596,7 +624,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                         <input
                             type="date"
                             required={config()?.requiredFields.includes(field)}
-                            value={(data[field] as string) || ''}
+                            value={(formData()[field] as string) || ''}
                             onChange={(e) => handleFormChange(field, e.currentTarget.value)}
                             class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm"
                         />
@@ -608,9 +636,9 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                             {field === 'ci_tim' ? 'Jam Check-In (CI)' : 'Jam Check-Out (CO)'} {config()?.requiredFields.includes(field) && <span class="text-red-500">*</span>}
                         </label>
                         <input
-                            type="datetime-local"
+                            type="time"
                             required={config()?.requiredFields.includes(field)}
-                            value={(data[field] as string) || ''}
+                            value={(formData()[field] as string) || ''}
                             onChange={(e) => handleFormChange(field, e.currentTarget.value)}
                             class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm"
                         />
@@ -621,17 +649,31 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                         <label class="block text-sm font-semibold text-slate-700">Approval Chain <span class="text-red-500">*</span></label>
                         <div class="space-y-2">
                             <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                                <input type="checkbox" checked={(data.tpas_approved as boolean) || false} onChange={e => handleFormChange('tpas_approved', e.currentTarget.checked)} class="rounded text-blue-600 focus:ring-blue-500" />
+                                <input type="checkbox" checked={(formData().tpas_approved as boolean) || false} onChange={e => handleFormChange('tpas_approved', e.currentTarget.checked)} class="rounded text-blue-600 focus:ring-blue-500" />
                                 TPAS Approved *
                             </label>
                             <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                                <input type="checkbox" checked={(data.tp_approved as boolean) || false} onChange={e => handleFormChange('tp_approved', e.currentTarget.checked)} class="rounded text-blue-600 focus:ring-blue-500" />
+                                <input type="checkbox" checked={(formData().tp_approved as boolean) || false} onChange={e => handleFormChange('tp_approved', e.currentTarget.checked)} class="rounded text-blue-600 focus:ring-blue-500" />
                                 TP Approved *
                             </label>
                             <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                                <input type="checkbox" checked={(data.caf_approved as boolean) || false} onChange={e => handleFormChange('caf_approved', e.currentTarget.checked)} class="rounded text-blue-600 focus:ring-blue-500" />
+                                <input type="checkbox" checked={(formData().caf_approved as boolean) || false} onChange={e => handleFormChange('caf_approved', e.currentTarget.checked)} class="rounded text-blue-600 focus:ring-blue-500" />
                                 CAF Approved <span class="text-slate-400 text-xs ml-1">(Jika TP sewa pihak lain)</span>
                             </label>
+                        </div>
+                        
+                        <div class="pt-2 border-t border-slate-200">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                                Detail Approval Chain <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Contoh: Dirut -> GM -> PM"
+                                required
+                                value={(formData().approval_chain as string) || ''}
+                                onChange={(e) => handleFormChange('approval_chain', e.currentTarget.value)}
+                                class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                            />
                         </div>
                     </div>
                 </Match>
@@ -641,7 +683,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                         <select
                             required
                             class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm"
-                            value={(data.tower_provider as string) || ''}
+                            value={(formData().tower_provider as string) || ''}
                             onChange={(e) => handleFormChange('tower_provider', e.currentTarget.value)}
                         >
                             <option value="">Pilih provider...</option>
@@ -664,7 +706,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                             type="radio"
                                             name="jenis_kunci"
                                             value={k}
-                                            checked={data.jenis_kunci === k}
+                                            checked={formData().jenis_kunci === k}
                                             onChange={(e) => handleFormChange('jenis_kunci', e.currentTarget.value)}
                                             class="text-blue-600 focus:ring-blue-500"
                                         />
@@ -673,6 +715,18 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                 )}
                             </For>
                         </div>
+                    </div>
+                </Match>
+                <Match when={field === 'catatan_teknis'}>
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-700">Catatan Teknis</label>
+                        <textarea
+                            rows={3}
+                            value={(formData().catatan_teknis as string) || ''}
+                            onChange={(e) => handleFormChange('catatan_teknis', e.currentTarget.value)}
+                            class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                            placeholder="Contoh: Semua antena telah diperiksa"
+                        />
                     </div>
                 </Match>
                 <Match when={['erfin_number', 'pic_nama', 'pic_telp', 'no_invoice'].includes(field)}>
@@ -694,29 +748,94 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                             field === 'no_invoice' ? 'INV-XXX' : ''
                             }
                             required={config()?.requiredFields.includes(field)}
-                            value={(data[field] as string) || ''}
+                            value={(formData()[field] as string) || ''}
                             onChange={(e) => handleFormChange(field, e.currentTarget.value)}
                             class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm"
                         />
                     </div>
                 </Match>
+                <Match when={field === 'has_akses_gedung'}>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                            <span class="text-sm font-semibold text-slate-700">Ada Akses Gedung?</span>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-medium text-slate-500">{formData().has_akses_gedung ? 'Ya' : 'Tidak'}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleFormChange('has_akses_gedung', !formData().has_akses_gedung)}
+                                    class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${formData().has_akses_gedung ? 'bg-blue-600' : 'bg-slate-300'}`}
+                                >
+                                    <span
+                                        class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData().has_akses_gedung ? 'translate-x-6' : 'translate-x-1'}`}
+                                    />
+                                </button>
+                            </div>
+                        </div>
+
+                        {formData().has_akses_gedung && (
+                            <div class="p-4 bg-blue-50/30 border border-blue-100 rounded-lg space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div class="space-y-1">
+                                    <label class="block text-sm font-medium text-slate-700">Nama Gedung <span class="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        required={formData().has_akses_gedung}
+                                        value={(formData().gedung_nama as string) || ''}
+                                        onChange={(e) => handleFormChange('gedung_nama', e.currentTarget.value)}
+                                        class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                                    />
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-1">
+                                        <label class="block text-sm font-medium text-slate-700">PIC Gedung Nama</label>
+                                        <input
+                                            type="text"
+                                            value={(formData().gedung_pic_nama as string) || ''}
+                                            onChange={(e) => handleFormChange('gedung_pic_nama', e.currentTarget.value)}
+                                            class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                                        />
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-sm font-medium text-slate-700">PIC Gedung Telp</label>
+                                        <input
+                                            type="tel"
+                                            value={(formData().gedung_pic_telp as string) || ''}
+                                            onChange={(e) => handleFormChange('gedung_pic_telp', e.currentTarget.value)}
+                                            class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-sm font-medium text-slate-700">Status Akses Gedung</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Misal: Sudah izin RT/RW, dsb"
+                                        value={(formData().gedung_akses_status as string) || ''}
+                                        onChange={(e) => handleFormChange('gedung_akses_status', e.currentTarget.value)}
+                                        class="w-full px-3 py-2 border border-slate-300 rounded focus:border-blue-500 text-sm bg-white"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </Match>
+
                 <Match when={['konfirmasi_akses', 'konfirmasi_rfi', 'konfirmasi_rfs', 'konfirmasi_dok', 'konfirmasi_final'].includes(field)}>
                     <div class="pt-2">
-                        <label class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded cursor-pointer hover:bg-blue-100/50 transition-colors">
+                        <label class="flex items-center gap-3 p-4 bg-blue-50/50 border border-blue-100 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
                             <input
                                 type="checkbox"
                                 required
-                                checked={(data[field] as boolean) || false}
+                                checked={(formData()[field] as boolean) || false}
                                 onChange={(e) => handleFormChange(field, e.currentTarget.checked)}
-                                class="mt-0.5 rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                class="w-5 h-5 rounded text-blue-600 focus:ring-blue-500 border-blue-300"
                             />
-                            <span class="text-sm font-medium text-slate-800 tracking-tight leading-tight">
+                            <span class="text-sm font-bold text-slate-700 leading-tight">
                                 {
                                     field === 'konfirmasi_akses' ? 'Akses ke site sudah READY EKSEKUSI' :
-                                        field === 'konfirmasi_rfi' ? 'RFI sudah selesai dilakukan' :
-                                            field === 'konfirmasi_rfs' ? 'Site sudah Ready For Service (RFS)' :
-                                                field === 'konfirmasi_dok' ? 'Semua dokumen pekerjaan sudah disubmit' :
-                                                    field === 'konfirmasi_final' ? 'Semua termin sudah dibayar dan pekerjaan selesai' : ''
+                                        field === 'konfirmasi_rfi' ? 'Pekerjaan Install & Integrasi sudah SELESAI' :
+                                            field === 'konfirmasi_rfs' ? 'Site sudah siap untuk RFS' :
+                                                field === 'konfirmasi_dok' ? 'Dokumen BAST sudah LENGKAP' :
+                                                    field === 'konfirmasi_final' ? 'Konfirmasi penyelesaian seluruh tahapan' : ''
                                 } <span class="text-red-500">*</span>
                             </span>
                         </label>
@@ -732,7 +851,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                         type="radio"
                                         name="survey_result"
                                         value="ok"
-                                        checked={data.survey_result === 'ok'}
+                                        checked={formData().survey_result === 'ok'}
                                         onChange={(e) => handleFormChange('survey_result', e.currentTarget.value)}
                                         class="mt-0.5 text-blue-600 focus:ring-blue-500 w-4 h-4"
                                     />
@@ -746,14 +865,14 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                         type="radio"
                                         name="survey_result"
                                         value="nok"
-                                        checked={data.survey_result === 'nok'}
+                                        checked={formData().survey_result === 'nok'}
                                         onChange={(e) => handleFormChange('survey_result', e.currentTarget.value)}
                                         class="mt-0.5 text-red-600 focus:ring-red-500 w-4 h-4"
                                     />
                                     <div>
                                         <div class="flex items-center gap-2">
                                             <span class="block text-sm font-bold text-red-700">NOK</span>
-                                            <Show when={data.survey_result === 'nok'}>
+                                            <Show when={formData().survey_result === 'nok'}>
                                                 <span class="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Hentikan Sementara</span>
                                             </Show>
                                         </div>
@@ -763,7 +882,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                             </div>
                         </div>
 
-                        <Show when={data.survey_result === 'nok'}>
+                        <Show when={formData().survey_result === 'nok'}>
                             <div class="space-y-2 animate-in slide-in-from-top-2 duration-200">
                                 <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 p-3 rounded">
                                     <AlertTriangleIcon class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -777,7 +896,7 @@ const UpdateStageModal: Component<UpdateStageModalProps> = (props) => {
                                     <textarea
                                         required
                                         rows={3}
-                                        value={(data.survey_nok_reason as string) || ''}
+                                        value={(formData().survey_nok_reason as string) || ''}
                                         onChange={(e) => handleFormChange('survey_nok_reason', e.currentTarget.value)}
                                         class="w-full px-3 py-2 border border-red-300 rounded focus:border-red-500 text-sm bg-white"
                                         placeholder="Jelaskan alasan site tidak layak..."

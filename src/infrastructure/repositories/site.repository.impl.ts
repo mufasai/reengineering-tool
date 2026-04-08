@@ -102,11 +102,11 @@ export class SiteRepositoryImpl implements SiteRepository {
         // Handle file uploads if present
         if (request.files && Array.isArray(request.files)) {
             request.files.forEach((file: File) => {
-                formData.append('file', file);
+                formData.append('files[]', file);
             });
         }
 
-        const response = await apiClient.postFormData<ApiResponse<Site>>(`/api/sites/${siteId}/stage`, formData);
+        const response = await apiClient.putFormData<ApiResponse<Site>>(`/api/sites/${siteId}/stage`, formData);
         return response.data;
     }
 }
