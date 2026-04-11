@@ -5,6 +5,8 @@ export type WOStatus = 'TECHNICAL_PROCESS' | 'TERMIN_1' | 'TERMIN_2' | 'TERMIN_3
 export type ProjectType = 'COMBAT' | 'L2H' | 'BLACK SITE' | 'REFINEN' | 'FILTER' | 'BEBAN OPERASIONAL';
 
 export interface Site {
+    region: string;
+    site_id: string;
     id: string;
     project_id?: string;
     site_name: string;
