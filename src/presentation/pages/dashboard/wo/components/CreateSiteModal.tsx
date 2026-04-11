@@ -64,7 +64,9 @@ const CreateSiteModal: Component<CreateSiteModalProps> = (props) => {
             impl_rfs_done: false,
             impl_dokumen_done: false,
             ineom_registered: false,
-            team: team()
+            team: team(),
+            region: '',
+            site_id: ''
         };
         props.onSave(newSite);
     };

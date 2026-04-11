@@ -43,7 +43,9 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                     impl_dokumen_done: false,
                     ineom_registered: false,
                     team: [],
-                    project_id: 'P1'
+                    project_id: 'P1',
+                    region: '',
+                    site_id: ''
                 },
                 {
                     id: 'S2',
@@ -69,7 +71,9 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                     impl_dokumen_done: false,
                     ineom_registered: false,
                     team: [],
-                    project_id: 'P2'
+                    project_id: 'P2',
+                    region: '',
+                    site_id: ''
                 },
                 {
                     id: 'S3',
@@ -95,7 +99,9 @@ const TechnicalProcessForm: Component<TechnicalProcessFormProps> = (props) => {
                     impl_dokumen_done: false,
                     ineom_registered: false,
                     team: [],
-                    project_id: 'P3'
+                    project_id: 'P3',
+                    region: '',
+                    site_id: ''
                 },
             ];
             setSites(mockSites);
