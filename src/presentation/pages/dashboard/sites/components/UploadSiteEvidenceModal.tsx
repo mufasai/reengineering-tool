@@ -17,17 +17,9 @@ interface UploadSiteEvidenceModalProps {
     onSuccess: () => void;
 }
 
-const PROGRESS_TAGS = [
-    { value: 'survei', label: 'Survei' },
-    { value: 'implementasi', label: 'Implementasi' },
-    { value: 'commissioning', label: 'Commissioning' },
-    { value: 'serah_terima', label: 'Serah Terima' }
-];
-
 const UploadSiteEvidenceModal: Component<UploadSiteEvidenceModalProps> = (props) => {
-    const [progressTag, setProgressTag] = createSignal('survei');
-    const [stageContext, setStageContext] = createSignal('');
-    const [uploadedBy, setUploadedBy] = createSignal(authStore.user()?.name || '');
+    const [title, setTitle] = createSignal('');
+    const [keterangan, setKeterangan] = createSignal('');
     const [selectedFile, setSelectedFile] = createSignal<File | null>(null);
     const [loading, setLoading] = createSignal(false);
     const [error, setError] = createSignal('');
@@ -48,19 +40,27 @@ const UploadSiteEvidenceModal: Component<UploadSiteEvidenceModalProps> = (props)
             return;
         }
 
-        if (!uploadedBy().trim()) {
-            setError('Nama uploader harus diisi');
+        if (!title().trim()) {
+            setError('Title harus diisi');
+            return;
+        }
+
+        if (!keterangan().trim()) {
+            setError('Keterangan harus diisi');
             return;
         }
 
         try {
             setLoading(true);
 
+            // Get uploaded_by from auth store automatically
+            const uploadedBy = authStore.user()?.name || authStore.user()?.email || 'Unknown User';
+
             const request: UploadSiteEvidenceRequest = {
                 file: selectedFile()!,
-                progress_tag: progressTag(),
-                stage_context: stageContext() || undefined,
-                uploaded_by: uploadedBy()
+                title: title(),
+                keterangan: keterangan(),
+                uploaded_by: uploadedBy
             };
 
             const siteRepository = new SiteRepositoryImpl();
@@ -68,8 +68,8 @@ const UploadSiteEvidenceModal: Component<UploadSiteEvidenceModalProps> = (props)
             await uploadUseCase.execute(props.siteId, request);
 
             // Reset form
-            setProgressTag('survei');
-            setStageContext('');
+            setTitle('');
+            setKeterangan('');
             setSelectedFile(null);
 
             props.onSuccess();
@@ -84,8 +84,8 @@ const UploadSiteEvidenceModal: Component<UploadSiteEvidenceModalProps> = (props)
 
     const handleClose = () => {
         if (!loading()) {
-            setProgressTag('survei');
-            setStageContext('');
+            setTitle('');
+            setKeterangan('');
             setSelectedFile(null);
             setError('');
             props.onClose();
@@ -131,38 +131,37 @@ const UploadSiteEvidenceModal: Component<UploadSiteEvidenceModalProps> = (props)
                             </div>
                         </Show>
 
-                        {/* Progress Tag */}
+                        {/* Title */}
                         <div class="space-y-2">
                             <label class="block text-sm font-semibold text-slate-700">
-                                Progress Tag <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                value={progressTag()}
-                                onChange={(e) => setProgressTag(e.currentTarget.value)}
-                                disabled={loading()}
-                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:bg-slate-100"
-                            >
-                                <For each={PROGRESS_TAGS}>
-                                    {(tag) => <option value={tag.value}>{tag.label}</option>}
-                                </For>
-                            </select>
-                        </div>
-
-                        {/* Stage Context */}
-                        <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-slate-700">
-                                Konteks Stage (Opsional)
+                                Title <span class="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
-                                value={stageContext()}
-                                onInput={(e) => setStageContext(e.currentTarget.value)}
-                                placeholder="Contoh: Pemasangan tiang ODC area Menteng"
+                                value={title()}
+                                onInput={(e) => setTitle(e.currentTarget.value)}
+                                placeholder="Contoh: Foto Lapangan"
+                                required
                                 disabled={loading()}
                                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400 disabled:bg-slate-100"
                             />
                         </div>
 
+                        {/* Keterangan */}
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Keterangan <span class="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                value={keterangan()}
+                                onInput={(e) => setKeterangan(e.currentTarget.value)}
+                                placeholder="Contoh: Pemasangan tiang ODC area Menteng"
+                                required
+                                disabled={loading()}
+                                rows={3}
+                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400 disabled:bg-slate-100 resize-none"
+                            />
+                        </div>
 
                         {/* File Upload */}
                         <div class="space-y-2">

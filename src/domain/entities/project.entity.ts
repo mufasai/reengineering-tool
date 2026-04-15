@@ -44,6 +44,7 @@ export interface UpdateProjectRequest {
 
 export interface ImportProjectRequest {
     file: File;
+    projectType?: string;
 }
 
 export interface ImportProjectResponse {

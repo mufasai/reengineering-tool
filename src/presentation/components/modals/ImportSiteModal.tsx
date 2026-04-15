@@ -1,5 +1,6 @@
 import { createSignal, createEffect, Show, Switch, Match, For } from 'solid-js';
 import type { Component } from 'solid-js';
+import AlertModal from './AlertModal';
 
 // Helper for classes
 const clsx = (...classes: any[]) => classes.flat().filter(Boolean).join(' ');
@@ -61,12 +62,18 @@ const ImportSiteModal: Component<ImportSiteModalProps> = (props) => {
     const [activeTab, setActiveTab] = createSignal<'excel' | 'manual'>('excel');
     let fileInputRef: HTMLInputElement | undefined;
     const [selectedFile, setSelectedFile] = createSignal<File | null>(null);
+    const [projectType, setProjectType] = createSignal<string>('COMBAT');
 
     // Step 3 State (Conflicts)
     const [conflicts, setConflicts] = createSignal<any[]>([]);
     
     // Step 4 State (Result)
     const [resultCounts, setResultCounts] = createSignal({ new: 0, updated: 0, skipped: 0, unchanged: 0, errors: [] as string[] });
+
+    // Alert Modal State
+    const [alertOpen, setAlertOpen] = createSignal(false);
+    const [alertMessage, setAlertMessage] = createSignal('');
+    const [alertType, setAlertType] = createSignal<'error' | 'success' | 'info' | 'warning'>('error');
 
     createEffect(() => {
         if (!props.isOpen) {
@@ -75,6 +82,7 @@ const ImportSiteModal: Component<ImportSiteModalProps> = (props) => {
                 setStep(1);
                 setActiveTab('excel');
                 setSelectedFile(null);
+                setProjectType('COMBAT');
                 setConflicts([]);
             }, 300);
             return () => clearTimeout(timer);
@@ -94,7 +102,7 @@ const ImportSiteModal: Component<ImportSiteModalProps> = (props) => {
         setStep(2);
 
         try {
-            const response = await importProject.execute({ file });
+            const response = await importProject.execute({ file, projectType: projectType() });
             
             if (response.success) {
                 // Map API response to result state
@@ -113,12 +121,16 @@ const ImportSiteModal: Component<ImportSiteModalProps> = (props) => {
                 // we'll skip Step 3 and go straight to Step 4
                 setStep(4);
             } else {
-                alert(`Import failed: ${response.message}`);
+                setAlertType('error');
+                setAlertMessage(`Import failed: ${response.message}`);
+                setAlertOpen(true);
                 setStep(1);
             }
         } catch (error: any) {
             console.error("Import error:", error);
-            alert(`An error occurred: ${error.message || 'Unknown error'}`);
+            setAlertType('error');
+            setAlertMessage(`An error occurred: ${error.message || 'Unknown error'}`);
+            setAlertOpen(true);
             setStep(1);
         }
     };
@@ -256,6 +268,18 @@ const ImportSiteModal: Component<ImportSiteModalProps> = (props) => {
                                                             </button>
                                                         </div>
                                                     </Show>
+                                                </div>
+
+                                                <div class="space-y-1.5">
+                                                    <label class="text-xs font-bold text-slate-700">Project Type *</label>
+                                                    <select 
+                                                        value={projectType()} 
+                                                        onInput={(e) => setProjectType(e.currentTarget.value)}
+                                                        class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    >
+                                                        <option value="COMBAT">COMBAT</option>
+                                                        <option value="FILTER">FILTER</option>
+                                                    </select>
                                                 </div>
 
                                                 <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 flex gap-3 text-sm">
@@ -424,6 +448,14 @@ const ImportSiteModal: Component<ImportSiteModalProps> = (props) => {
                     </div>
                 </div>
             </div>
+
+            {/* Alert Modal */}
+            <AlertModal
+                isOpen={alertOpen()}
+                type={alertType()}
+                message={alertMessage()}
+                onClose={() => setAlertOpen(false)}
+            />
         </Show>
     );
 };
