@@ -15,7 +15,7 @@ pipeline {
         CRED_ID = 'Smartelco-IT'
         DOCKER_ID = 'test-cicd-docker'
         LOG_FILE = "jenkins_error.log"
-        VITE_API_URL='https://reenginering.3ddm.my.id/api/'
+        VITE_API_BASE_URL = 'https://reenginering-fe.3ddm.my.id/v1'
     }
 
     stages {
