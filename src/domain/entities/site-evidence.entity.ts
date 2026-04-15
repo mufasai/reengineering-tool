@@ -1,21 +1,23 @@
 export interface SiteEvidence {
     id: string;
     site_id: string;
-    progress_tag: 'survei' | 'implementasi' | 'commissioning' | 'serah_terima';
-    stage_context: string | null;
-    url: string;
+    title: string;
     filename: string;
-    mime_type: string;
-    size: number;
+    keterangan: string;
+    progress_tag?: string | null;
+    url?: string;
+    mime_type?: string;
+    size?: number;
     uploaded_at: string;
     uploaded_by: string;
 }
 
 export interface UploadSiteEvidenceRequest {
     file: File;
-    progress_tag: string;
-    stage_context?: string;
+    title: string;
+    keterangan: string;
     uploaded_by: string;
+    progress_tag?: string;
 }
 
 export interface SiteEvidenceApiResponse {

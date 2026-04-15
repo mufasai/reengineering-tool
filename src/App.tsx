@@ -6,6 +6,7 @@ import RegisterPage from './presentation/pages/auth/register/RegisterPage';
 import WorkOrdersPage from './presentation/pages/dashboard/wo/WorkOrdersPage';
 import ProjectListPage from './presentation/pages/dashboard/projects/ProjectListPage';
 import AllSitesPage from './presentation/pages/dashboard/sites/AllSitesPage';
+import FilterSitesPage from './presentation/pages/dashboard/sites/FilterSitesPage';
 import PeoplePage from './presentation/pages/dashboard/people/PeoplePage';
 import TeamsPage from './presentation/pages/dashboard/teams/TeamsPage';
 import UserManagementPage from './presentation/pages/dashboard/system/UserManagementPage';
@@ -118,7 +119,10 @@ const App: Component = () => {
                   <ProjectListPage filterType="COMBAT" />
                 </Match>
                 <Match when={activeTab() === 'FILTER'}>
-                  <ProjectListPage filterType="FILTER" />
+                  <FilterSitesPage onViewDetail={(id: string) => {
+                    setSelectedSiteId(id);
+                    setActiveTab('SITE_DETAIL');
+                  }} />
                 </Match>
                 <Match when={activeTab() === 'L2H'}>
                   <ProjectListPage filterType="L2H" />

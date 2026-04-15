@@ -58,6 +58,9 @@ export class ProjectRepositoryImpl implements ProjectRepository {
     async importFromExcel(request: ImportProjectRequest): Promise<ImportProjectResponse> {
         const formData = new FormData();
         formData.append('file', request.file);
+        if (request.projectType) {
+            formData.append('project_type', request.projectType);
+        }
 
         const response = await apiClient.postFormData<ImportProjectResponse>(
             '/api/projects/import-excel',

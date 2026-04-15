@@ -52,11 +52,14 @@ export class SiteRepositoryImpl implements SiteRepository {
     async uploadEvidence(siteId: string, request: UploadSiteEvidenceRequest): Promise<SiteEvidence> {
         const formData = new FormData();
         formData.append('file', request.file);
-        formData.append('progress_tag', request.progress_tag);
-        if (request.stage_context) {
-            formData.append('stage_context', request.stage_context);
-        }
+        formData.append('title', request.title);
+        formData.append('keterangan', request.keterangan);
         formData.append('uploaded_by', request.uploaded_by);
+        
+        // progress_tag is optional, only add if provided
+        if (request.progress_tag) {
+            formData.append('progress_tag', request.progress_tag);
+        }
 
         const response = await apiClient.postFormData<CreateEvidenceApiResponse>(`/api/sites/${siteId}/evidence`, formData);
         return response.data;
