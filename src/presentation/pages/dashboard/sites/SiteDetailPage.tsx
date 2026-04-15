@@ -563,13 +563,13 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
                                                                 fallback={
                                                                     <div class="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
                                                                         <ImageIcon class="w-8 h-8 mb-2 opacity-50" />
-                                                                        <span class="text-[10px] uppercase font-bold tracking-wider">{item.progress_tag}</span>
+                                                                        <span class="text-[10px] uppercase font-bold tracking-wider">{item.title || 'Evidence'}</span>
                                                                     </div>
                                                                 }
                                                             >
                                                                 <img
                                                                     src={item.url ? ((item.url.startsWith('http') || item.url.startsWith('data:')) ? item.url : `${import.meta.env.VITE_API_URL}${item.url}`) : `${import.meta.env.VITE_API_URL}/api/site-evidence/${item.id}/preview`}
-                                                                    alt={item.progress_tag}
+                                                                    alt={item.title || item.filename || 'Evidence'}
                                                                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                                                     onError={(e) => {
                                                                         // If image fails to load, maybe show placeholder? 
@@ -581,8 +581,8 @@ const SiteDetailPage: Component<SiteDetailPageProps> = (props) => {
 
                                                             {/* Overlay */}
                                                             <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent p-3 translate-y-2 group-hover:translate-y-0 transition-transform opacity-0 group-hover:opacity-100">
-                                                                <p class="text-[10px] font-bold text-white uppercase tracking-widest mb-0.5">{item.progress_tag}</p>
-                                                                <p class="text-white/80 text-[10px] line-clamp-1">{item.stage_context || 'No context'}</p>
+                                                                <p class="text-[10px] font-bold text-white uppercase tracking-widest mb-0.5">{item.title || 'Evidence'}</p>
+                                                                <p class="text-white/80 text-[10px] line-clamp-1">{item.keterangan || 'No description'}</p>
                                                             </div>
 
                                                             {/* Date Badge */}

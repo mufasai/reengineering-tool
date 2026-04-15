@@ -93,7 +93,7 @@ const SiteEvidencePreviewModal: Component<SiteEvidencePreviewModalProps> = (prop
         } catch (error) {
             console.error('Error fetching preview blob:', error);
             // Fallback for mock data or direct URLs
-            if (evidence.url.startsWith('http') || evidence.url.startsWith('/uploads')) {
+            if (evidence.url && (evidence.url.startsWith('http') || evidence.url.startsWith('/uploads'))) {
                 setPreviewBlobUrl(getPreviewUrl(evidence));
             } else {
                 setPreviewBlobUrl(null);
@@ -184,9 +184,9 @@ const SiteEvidencePreviewModal: Component<SiteEvidencePreviewModalProps> = (prop
                             {/* Evidence Info Grid */}
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                 <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Konteks</p>
-                                    <p class="text-sm font-bold text-slate-800 line-clamp-1" title={evidence().stage_context || 'N/A'}>
-                                        {evidence().stage_context || 'No context'}
+                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Keterangan</p>
+                                    <p class="text-sm font-bold text-slate-800 line-clamp-1" title={evidence().keterangan || 'N/A'}>
+                                        {evidence().keterangan || 'No description'}
                                     </p>
                                 </div>
                                 <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
@@ -200,7 +200,7 @@ const SiteEvidencePreviewModal: Component<SiteEvidencePreviewModalProps> = (prop
                                 <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Size / Type</p>
                                     <p class="text-sm font-bold text-slate-800 uppercase tracking-tighter">
-                                        {evidence().size ? formatFileSize(evidence().size) : 'Unknown Size'} · {evidence().mime_type?.split('/').pop() || 'Unknown'}
+                                        {evidence().size ? formatFileSize(evidence().size || 0) : 'Unknown Size'} · {(evidence().mime_type || 'application/octet-stream').split('/').pop() || 'Unknown'}
                                     </p>
                                 </div>
                             </div>
@@ -233,10 +233,10 @@ const SiteEvidencePreviewModal: Component<SiteEvidencePreviewModalProps> = (prop
                                     ) : (
                                         <div class="flex flex-col items-center justify-center p-16 text-center">
                                             <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                                                {getFileIcon(evidence().mime_type)}
+                                                {getFileIcon(evidence().mime_type || '')}
                                             </div>
                                             <h4 class="text-xl font-bold text-slate-900 mb-2">Pratinjau Tidak Tersedia</h4>
-                                            <p class="text-slate-500 max-w-sm font-medium">Format file ini ({evidence().mime_type}) tidak dapat ditampilkan langsung di browser.</p>
+                                            <p class="text-slate-500 max-w-sm font-medium">Format file ini ({evidence().mime_type || 'unknown'}) tidak dapat ditampilkan langsung di browser.</p>
                                             <p class="text-slate-400 text-sm mt-1 mb-8">Silakan unduh file untuk melihat kontennya.</p>
 
                                             <button
