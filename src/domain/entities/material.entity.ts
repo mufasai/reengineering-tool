@@ -1,33 +1,34 @@
-export interface MaterialTransaction {
+export interface MaterialMaster {
     id: string;
-    workOrderId: string;
-    materialName: string;
-    quantity: number;
-    type: 'COLLECTION' | 'HANDOVER';
-    skpDocumentUrl?: string; // Document for collection
-    handoverDocumentUrl?: string; // Document for receipt
-    transactionDate: Date;
-}
-
-export interface Material {
-    id: string;
-    skp: string;
-    name: string;
-    unit: string;
-    qty: number;
-    project_id: string;
-    site_id: string;
-    tgl: string;
-    created_at: string;
-    updated_at: string;
+    kode_material?: string;
+    nama_material: string;
+    kategori?: string;
+    spesifikasi?: string;
+    satuan?: string;
+    harga_satuan?: number;
+    status_aktif: boolean;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface CreateMaterialRequest {
-    skp: string;
-    name: string;
-    unit: string;
-    qty: number;
-    project_id: string;
-    site_id: string;
-    tgl: string;
+    kode_material?: string;
+    nama_material: string;
+    kategori?: string;
+    spesifikasi?: string;
+    satuan?: string;
+    harga_satuan?: number;
+    status_aktif?: boolean;
+}
+
+export interface MaterialUsage {
+    material_master_id: string;
+    siteId: string;
+    quantity: number;
+}
+
+export interface ApiResponse<T> {
+    data: T;
+    message?: string;
+    success: boolean;
 }

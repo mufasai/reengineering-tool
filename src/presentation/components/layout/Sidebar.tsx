@@ -107,6 +107,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
         if (hasPermission('people') || hasPermission('teams')) {
             items.push({ icon: UsersIcon, label: 'Workforce', id: 'WORKFORCE' });
         }
+        if (hasPermission('site-master')) {
+            items.push({ icon: DatabaseIcon, label: 'Material Master', id: 'MATERIAL_MASTER' });
+        }
         return items;
     };
 

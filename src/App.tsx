@@ -8,6 +8,7 @@ import ProjectListPage from './presentation/pages/dashboard/projects/ProjectList
 import AllSitesPage from './presentation/pages/dashboard/sites/AllSitesPage';
 import FilterSitesPage from './presentation/pages/dashboard/sites/FilterSitesPage';
 import WorkforcePage from './presentation/pages/dashboard/workforce/WorkforcePage';
+import MaterialMasterPage from './presentation/pages/dashboard/materials/MaterialMasterPage';
 import UserManagementPage from './presentation/pages/dashboard/system/UserManagementPage';
 import TerminListPage from './presentation/pages/dashboard/termin/TerminListPage';
 import SiteDetailPage from './presentation/pages/dashboard/sites/SiteDetailPage';
@@ -18,7 +19,7 @@ import { projectStore } from './presentation/store/project.store';
 import './index.css';
 
 const App: Component = () => {
-  const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'ALL_SITES' | 'SITE_DETAIL' | 'WORKFORCE' | 'SYSTEM' | 'TERMIN' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN' | 'BEBAN_OPERASIONAL'>('DASHBOARD');
+  const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'ALL_SITES' | 'SITE_DETAIL' | 'WORKFORCE' | 'MATERIAL_MASTER' | 'SYSTEM' | 'TERMIN' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN' | 'BEBAN_OPERASIONAL'>('DASHBOARD');
   const [selectedSiteId, setSelectedSiteId] = createSignal<string | null>(null);
   const [authView, setAuthView] = createSignal<'login' | 'register'>('login');
   const isLoggedIn = () => authStore.isAuthenticated();
@@ -100,6 +101,9 @@ const App: Component = () => {
                 </Match>
                 <Match when={activeTab() === 'WORKFORCE'}>
                   <WorkforcePage />
+                </Match>
+                <Match when={activeTab() === 'MATERIAL_MASTER'}>
+                  <MaterialMasterPage />
                 </Match>
                 <Match when={activeTab() === 'SYSTEM'}>
                   <UserManagementPage />
