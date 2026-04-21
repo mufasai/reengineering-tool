@@ -1,6 +1,6 @@
 import { createSignal, createMemo, Show, For } from 'solid-js';
 import type { Component } from 'solid-js';
-import type { MaterialMaster } from '../../../../domain/entities/material.entity';
+import type { MaterialMaster, CreateMaterialMasterRequest } from '../../../../domain/entities/material.entity';
 
 // Icons as inline SVGs
 const SearchIcon = (props: { class?: string }) => (
