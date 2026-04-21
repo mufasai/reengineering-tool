@@ -104,11 +104,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
         // if (hasPermission('site-master')) {
         //     items.push({ icon: DatabaseIcon, label: 'Sites', id: 'SITES', badge: 1 });
         // }
-        if (hasPermission('people')) {
-            items.push({ icon: UsersIcon, label: 'People', id: 'PEOPLE' });
+        if (hasPermission('people') || hasPermission('teams')) {
+            items.push({ icon: UsersIcon, label: 'Workforce', id: 'WORKFORCE' });
         }
-        if (hasPermission('teams')) {
-            items.push({ icon: UsersIcon, label: 'Teams', id: 'TEAMS' });
+        if (hasPermission('site-master')) {
+            items.push({ icon: DatabaseIcon, label: 'Material Master', id: 'MATERIAL_MASTER' });
         }
         return items;
     };

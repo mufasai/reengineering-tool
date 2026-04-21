@@ -7,8 +7,8 @@ import WorkOrdersPage from './presentation/pages/dashboard/wo/WorkOrdersPage';
 import ProjectListPage from './presentation/pages/dashboard/projects/ProjectListPage';
 import AllSitesPage from './presentation/pages/dashboard/sites/AllSitesPage';
 import FilterSitesPage from './presentation/pages/dashboard/sites/FilterSitesPage';
-import PeoplePage from './presentation/pages/dashboard/people/PeoplePage';
-import TeamsPage from './presentation/pages/dashboard/teams/TeamsPage';
+import WorkforcePage from './presentation/pages/dashboard/workforce/WorkforcePage';
+import MaterialMasterPage from './presentation/pages/dashboard/materials/MaterialMasterPage';
 import UserManagementPage from './presentation/pages/dashboard/system/UserManagementPage';
 import TerminListPage from './presentation/pages/dashboard/termin/TerminListPage';
 import SiteDetailPage from './presentation/pages/dashboard/sites/SiteDetailPage';
@@ -19,7 +19,7 @@ import { projectStore } from './presentation/store/project.store';
 import './index.css';
 
 const App: Component = () => {
-  const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'ALL_SITES' | 'SITE_DETAIL' | 'PEOPLE' | 'TEAMS' | 'SYSTEM' | 'TERMIN' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN' | 'BEBAN_OPERASIONAL'>('DASHBOARD');
+  const [activeTab, setActiveTab] = createSignal<'DASHBOARD' | 'WO' | 'SPK' | 'PROJECTS' | 'ALL_SITES' | 'SITE_DETAIL' | 'WORKFORCE' | 'MATERIAL_MASTER' | 'SYSTEM' | 'TERMIN' | 'BLACKSITE' | 'COMBAT' | 'FILTER' | 'L2H' | 'REFINEN' | 'BEBAN_OPERASIONAL'>('DASHBOARD');
   const [selectedSiteId, setSelectedSiteId] = createSignal<string | null>(null);
   const [authView, setAuthView] = createSignal<'login' | 'register'>('login');
   const isLoggedIn = () => authStore.isAuthenticated();
@@ -99,11 +99,11 @@ const App: Component = () => {
                 <Match when={activeTab() === 'SITE_DETAIL'}>
                   <SiteDetailPage siteId={selectedSiteId() || ''} onBack={() => setActiveTab('ALL_SITES')} />
                 </Match>
-                <Match when={activeTab() === 'PEOPLE'}>
-                  <PeoplePage />
+                <Match when={activeTab() === 'WORKFORCE'}>
+                  <WorkforcePage />
                 </Match>
-                <Match when={activeTab() === 'TEAMS'}>
-                  <TeamsPage />
+                <Match when={activeTab() === 'MATERIAL_MASTER'}>
+                  <MaterialMasterPage />
                 </Match>
                 <Match when={activeTab() === 'SYSTEM'}>
                   <UserManagementPage />
