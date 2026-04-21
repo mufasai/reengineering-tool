@@ -170,10 +170,17 @@ const PeoplePage: Component = () => {
 
     return (
         <div class="space-y-8 animate-in fade-in duration-500">
-            <header class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 class="text-4xl font-bold tracking-tight text-slate-900 font-display">People Management</h1>
-                    <p class="text-slate-500 mt-2 font-medium">Kelola data karyawan, teknisi, dan personil lapangan.</p>
+            <div class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                {/* Search Bar */}
+                <div class="relative w-full max-w-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                    <input
+                        type="text"
+                        placeholder="Search by name, email, NIK, No HP..."
+                        value={searchTerm()}
+                        onInput={(e) => setSearchTerm(e.currentTarget.value)}
+                        class="w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-600 text-sm"
+                    />
                 </div>
                 <div class="flex items-center gap-3">
                     <button
@@ -181,31 +188,91 @@ const PeoplePage: Component = () => {
                         class="bg-white hover:bg-slate-50 text-slate-600 px-5 py-3 rounded-xl font-bold transition-all border border-slate-200 flex items-center gap-2"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 21h5v-5" /></svg>
-                        Refresh
+
+                    </button>
+                    <button
+                        onClick={() => {
+                            // Download CSV functionality
+                            const data = people() || [];
+                            const csvContent = "data:text/csv;charset=utf-8,"
+                                + "Name,Email,Phone,Position,Regional,KTP\n"
+                                + data.map(person =>
+                                    `"${person.name}","${person.email || ''}","${person.no_hp || ''}","${person.jabatan_kerja || ''}","${person.regional || ''}","${person.no_ktp || ''}"`
+                                ).join("\n");
+
+                            const encodedUri = encodeURI(csvContent);
+                            const link = document.createElement("a");
+                            link.setAttribute("href", encodedUri);
+                            link.setAttribute("download", "personnel_data.csv");
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        }}
+                        class="bg-white hover:bg-slate-50 text-slate-600 px-5 py-3 rounded-xl font-bold transition-all border border-slate-200 flex items-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+
                     </button>
                     <button
                         onClick={handleAdd}
                         class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7v14" /></svg>
-                        Tambah Person
+                        Add Person
                     </button>
+                    <button
+                        onClick={() => alert('Import Excel functionality - to be implemented')}
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                        Import Excel
+                    </button>
+
                 </div>
-            </header>
+            </div>
+
+            {/* Filters */}
+            <div class="flex flex-wrap gap-4">
+                <div class="relative">
+                    <select
+                        class="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                    >
+                        <option value="">Semua Jabatan</option>
+                        <option value="Engineer">Engineer</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Technician">Technician</option>
+                    </select>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
+                </div>
+
+                <div class="relative">
+                    <select
+                        class="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                    >
+                        <option value="">Semua Pekerjaan</option>
+                        <option value="Software Engineer">Software Engineer</option>
+                        <option value="Project Manager">Project Manager</option>
+                        <option value="Field Technician">Field Technician</option>
+                    </select>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
+                </div>
+
+                <div class="relative">
+                    <select
+                        class="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                    >
+                        <option value="">Semua Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
+                </div>
+            </div>
 
             {/* Main Content Card */}
             <div class="bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-sm p-6 space-y-6">
-                {/* Search Bar */}
-                <div class="relative w-full max-w-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-                    <input
-                        type="text"
-                        placeholder="Cari berdasarkan nama, email, KTP, jabatan, regional..."
-                        value={searchTerm()}
-                        onInput={(e) => setSearchTerm(e.currentTarget.value)}
-                        class="w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-600 text-sm"
-                    />
-                </div>
+                {/* Search Bar and Filters */}
+
 
                 {/* Loading State */}
                 <Show when={people.loading}>
