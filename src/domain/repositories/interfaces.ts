@@ -81,7 +81,13 @@ export interface MaterialRepository {
     findByWorkOrder(workOrderId: string): Promise<MaterialTransaction[]>;
     saveTransaction(transaction: MaterialTransaction): Promise<void>;
     findBySiteId(siteId: string): Promise<Material[]>;
+    findAll(): Promise<Material[]>;
     create(material: CreateMaterialRequest): Promise<Material>;
+    importFromExcel(file: File, projectId: string): Promise<{
+        imported_count: number;
+        failed_count: number;
+        errors?: string[];
+    }>;
 }
 
 export interface TerminRepository {

@@ -30,6 +30,19 @@ export interface Material {
     project_id: string;
     site_id: string;
     tgl: string;
+    material_master_id?: string | null;
+    source_master: boolean;
+    harga_satuan?: number | null;
+    spesifikasi?: string | null;
+    satuan?: string | null;
+    material_type?: string | null;
+    direction?: string | null;
+    delivery_note_no?: string | null;
+    po_delivery_date?: string | null;
+    vendor?: string | null;
+    sender?: string | null;
+    receiver?: string | null;
+    keterangan?: string | null;
     created_at?: string;
     updated_at?: string;
 }
