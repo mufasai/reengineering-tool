@@ -21,7 +21,7 @@ export const apiClient = {
         }
         return response.json();
     },
-    post: async <T>(path: string, body: any, p0: { headers: { 'Content-Type': string; }; }): Promise<T> => {
+    post: async <T>(path: string, body: any): Promise<T> => {
         const response = await fetch(`${BASE_URL}${path}`, {
             method: 'POST',
             headers: getHeaders(),
